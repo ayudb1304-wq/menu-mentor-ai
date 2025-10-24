@@ -86,3 +86,7 @@ Thumbs.db
 
 # TypeScript build info
 *.tsbuildinfo
+
+# Local test files with real credentials
+test-phase2.local.html
+*.local.html
