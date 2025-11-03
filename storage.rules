@@ -1,12 +1,22 @@
 rules_version = '2';
-
-// Craft rules based on data in your Firestore database
-// allow write: if firestore.get(
-//    /databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin;
 service firebase.storage {
   match /b/{bucket}/o {
+    // Lock down everything by default
     match /{allPaths=**} {
       allow read, write: if false;
+    }
+
+    // Allow users to write images to their own 'uploads' folder
+    // e.g., /uploads/USER_ID/menu.jpg
+    match /uploads/{userId}/{allPaths=**} {
+      allow write: if request.auth != null && request.auth.uid == userId
+                    && request.resource.size < 5 * 1024 * 1024 // 5MB limit
+                    && request.resource.contentType.matches('image/.*');
+      
+      // Allow our backend function to read this file
+      // This rule isn't strictly necessary if you use the Admin SDK,
+      // but it's good practice. The backend function bypasses these
+      // rules, but the gs:// path needs to be valid.
     }
   }
 }

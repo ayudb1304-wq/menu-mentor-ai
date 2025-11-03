@@ -1,10 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 // Placeholder imports (widgets don't exist yet)
 // import 'package:menu_mentor_app/models/analysis_result.dart';
@@ -187,6 +190,8 @@ class AnalysisScreen extends StatefulWidget {
 }
 
 class _AnalysisScreenState extends State<AnalysisScreen> {
+  final String _storageBucketId = 'menu-mentor-prod.firebasestorage.app'; // REPLACE THIS
+
   bool _isAnalyzing = true;
   AnalysisResult? _analysisResult;
   String? _errorMessage;
@@ -201,12 +206,9 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
 
   Future<void> _initializeScreen() async {
     try {
-      // Load ImageProvider
-      if (kIsWeb) {
-        _imageProvider = NetworkImage(widget.imageFile.path);
-      } else {
-        _imageProvider = FileImage(File(widget.imageFile.path));
-      }
+      // Load ImageProvider (cross-platform using bytes)
+      final bytes = await widget.imageFile.readAsBytes();
+      _imageProvider = MemoryImage(bytes);
 
       // Get Image Dimensions
       final imageSize = await _getImageDimensions(_imageProvider!);
@@ -243,45 +245,67 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
     });
 
     try {
-      // --- TODO: Upload image and trigger cloud function ---
+      // Get current user
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw Exception('No user logged in');
+      }
 
-      // Simulate analysis
-      await Future.delayed(const Duration(seconds: 4));
+      // Define upload path
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final fileName = '${timestamp}_${widget.imageFile.name}';
+      final uploadPath = 'uploads/${user.uid}/$fileName';
 
-      // Create Fake JSON Result
-      const fakeJsonResult = '''
-{
-  "items": [
-    {
-      "name": "Spring Rolls",
-      "classification": "compliant",
-      "reason": "Ingredients are vegan-friendly.",
-      "boundingBox": {"xMin": 0.1, "yMin": 0.15, "xMax": 0.8, "yMax": 0.25}
-    },
-    {
-      "name": "Pad Thai",
-      "classification": "non-compliant",
-      "reason": "Contains peanuts and fish sauce.",
-      "boundingBox": {"xMin": 0.1, "yMin": 0.3, "xMax": 0.8, "yMax": 0.4}
-    },
-    {
-      "name": "Green Curry",
-      "classification": "modifiable",
-      "reason": "Contains shrimp. Can be made with tofu.",
-      "boundingBox": {"xMin": 0.1, "yMin": 0.45, "xMax": 0.8, "yMax": 0.55}
-    }
-  ]
-}
-''';
+      // Read bytes from XFile (works on all platforms including web)
+      final bytes = await widget.imageFile.readAsBytes();
 
-      // Parse the JSON
-      final parsedResult = AnalysisResult.fromJson(jsonDecode(fakeJsonResult));
+      // Upload image to Firebase Storage using putData
+      final storageRef = FirebaseStorage.instance.ref().child(uploadPath);
+      final uploadTask = await storageRef.putData(bytes);
+
+      // Construct gs:// path
+      final gsPath = 'gs://$_storageBucketId/${uploadTask.ref.fullPath}';
+
+      // Fetch user profile from Firestore
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      if (!userDoc.exists) {
+        throw Exception('User profile not found');
+      }
+
+      final userData = userDoc.data()!;
+
+      // Build userProfile map
+      final userProfile = {
+        'diets': userData['dietaryPresets'] ?? [],
+        'restrictions': userData['customRestrictions'] ?? [],
+      };
+
+      // Call analyzeMenu Cloud Function
+      final callable = FirebaseFunctions.instance.httpsCallable('analyzeMenu');
+      final result = await callable.call({
+        'imageUrl': gsPath,
+        'userProfile': userProfile,
+      });
+
+      // Parse result
+      final parsedResult = AnalysisResult.fromJson(result.data as Map<String, dynamic>);
 
       setState(() {
         _analysisResult = parsedResult;
         _isAnalyzing = false;
       });
+    } on FirebaseFunctionsException catch (e) {
+      print('FirebaseFunctionsException - Code: ${e.code}, Message: ${e.message}, Details: ${e.details}');
+      setState(() {
+        _errorMessage = 'Function error: ${e.message ?? e.code}';
+        _isAnalyzing = false;
+      });
     } catch (e) {
+      print('Error during analysis: $e');
       setState(() {
         _errorMessage = 'Error during analysis: $e';
         _isAnalyzing = false;
@@ -313,9 +337,10 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
             textAlign: TextAlign.center,
             child: const TextLoop(
               children: [
-                Text("Extracting menu text... 🔍"),
-                Text("Analyzing ingredients... 🧑‍🍳"),
-                Text("Checking your profile... 📋"),
+                Text("Uploading menu... ☁️"),
+                Text("Analyzing ingredients... 🧠"),
+                Text("Checking your profile... 🧑‍🔬"),
+                Text("Building your results... 🪄"),
               ],
             ),
           ),
@@ -325,11 +350,34 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
 
     if (_errorMessage != null) {
       return Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Text(
-          'Error: $_errorMessage',
-          style: const TextStyle(color: Colors.red),
-          textAlign: TextAlign.center,
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.error_outline,
+              color: Colors.red,
+              size: 80,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Analysis Failed',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _errorMessage!,
+              style: const TextStyle(color: Colors.red),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Try Again'),
+            ),
+          ],
         ),
       );
     }
