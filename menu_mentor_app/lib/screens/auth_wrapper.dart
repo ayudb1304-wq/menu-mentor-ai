@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 // Import your screen widgets
 import 'package:menu_mentor_app/screens/auth_screen.dart';
-import 'package:menu_mentor_app/screens/home_screen.dart';
+import 'package:menu_mentor_app/screens/scan_options_screen.dart';
 import 'package:menu_mentor_app/screens/profile_setup_screen.dart';
 
 class AuthWrapper extends StatelessWidget {
@@ -49,7 +49,7 @@ class AuthWrapper extends StatelessWidget {
 
               if (profileComplete) {
                 // User logged in AND profile complete -> Go to Home
-                return const HomeScreen();
+                return const ScanOptionsScreen();
               } else {
                 // User logged in BUT profile incomplete -> Go to Profile Setup
                 return const ProfileSetupScreen();
