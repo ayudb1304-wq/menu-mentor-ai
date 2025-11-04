@@ -1,11 +1,11 @@
 {
-    "name": "menu_mentor_app",
-    "short_name": "menu_mentor_app",
+    "name": "Menurai",
+    "short_name": "Menurai",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Every diners best friend!",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

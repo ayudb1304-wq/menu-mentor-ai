@@ -284,8 +284,13 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
         'restrictions': userData['customRestrictions'] ?? [],
       };
 
-      // Call analyzeMenu Cloud Function
-      final callable = FirebaseFunctions.instance.httpsCallable('analyzeMenu');
+      // Call analyzeMenu Cloud Function with extended timeout
+      final callable = FirebaseFunctions.instance.httpsCallable(
+        'analyzeMenu',
+        options: HttpsCallableOptions(
+          timeout: const Duration(seconds: 300), // 5 minutes timeout
+        ),
+      );
       final result = await callable.call({
         'imageUrl': gsPath,
         'userProfile': userProfile,

@@ -1,6 +1,6 @@
 /**
  * Import function triggers from their respective submodules:
- */
+*/
 
 import {setGlobalOptions} from "firebase-functions";
 import {onCall, HttpsError} from "firebase-functions/v2/https";
@@ -39,7 +39,8 @@ interface AnalyzeMenuData {
 }
 
 // THE 180-IQ "REAL" FUNCTION
-export const analyzeMenu = onCall({timeoutSeconds: 540}, async (request) => {
+export const analyzeMenu = onCall({timeoutSeconds: 300}, async (request) => {
+  const functionStartTime = Date.now();
   logger.info("analyzeMenu (v4) function called", {structuredData: true});
 
   // 1. VALIDATE THE INPUT
@@ -61,6 +62,7 @@ export const analyzeMenu = onCall({timeoutSeconds: 540}, async (request) => {
     // ==========================================================
     // STEP 1: OCR (This is our Phase 2 code, now inside the real function)
     // ==========================================================
+    const ocrStartTime = Date.now();
     logger.info("Step 1: Calling Cloud Vision API", {imageUrl});
     const [visionResult] = await visionClient.documentTextDetection(imageUrl);
     const fullTextAnnotation = visionResult.fullTextAnnotation;
@@ -71,11 +73,13 @@ export const analyzeMenu = onCall({timeoutSeconds: 540}, async (request) => {
     }
 
     const rawOcrText = fullTextAnnotation.text;
-    logger.info("Step 1 Complete: Text extracted.");
+    const ocrDuration = Date.now() - ocrStartTime;
+    logger.info("Step 1 Complete: Text extracted.", {durationMs: ocrDuration});
 
     // ==========================================================
     // STEP 2: AI ANALYSIS (This is our Phase 3 code, now dynamic)
     // ==========================================================
+    const aiStartTime = Date.now();
     logger.info("Step 2: Calling Gemini API");
 
     // We're not hardcoding the profile anymore!
@@ -137,7 +141,8 @@ Return *nothing* but the single, valid JSON object in this exact format:
       throw new Error("No text returned from Gemini");
     }
 
-    logger.info("Step 2 Complete: AI analysis received.");
+    const aiDuration = Date.now() - aiStartTime;
+    logger.info("Step 2 Complete: AI analysis received.", {durationMs: aiDuration});
 
     // THE 180-IQ FIX (Clean-up): Strip the Markdown
     const cleanedJsonText = jsonText.replace(/^```json\n/, "").replace(/\n```$/, "");
@@ -148,7 +153,12 @@ Return *nothing* but the single, valid JSON object in this exact format:
     // ==========================================================
     // STEP 3: RETURN THE MAGIC
     // ==========================================================
-    logger.info("Step 3: Success. Returning magic JSON.");
+    const totalDuration = Date.now() - functionStartTime;
+    logger.info("Step 3: Success. Returning magic JSON.", {
+      totalDurationMs: totalDuration,
+      ocrDurationMs: ocrDuration,
+      aiDurationMs: aiDuration,
+    });
     return parsedResponse;
   } catch (error) {
     const errorMessage = error instanceof Error ?
