@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'package:menu_mentor_app/widgets/social_auth_buttons.dart';
 import 'package:menu_mentor_app/services/auth_service.dart';
+import 'package:menu_mentor_app/theme/app_colors.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -57,30 +59,40 @@ class _AuthScreenState extends State<AuthScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Welcome'),
-      ),
       body: Stack(
         children: [
           Center(
             child: Padding(
-              padding: const EdgeInsets.all(24.0),
+              padding: const EdgeInsets.all(28.0),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  const Icon(
+                    LucideIcons.utensilsCrossed,
+                    size: 64,
+                    color: AppColors.brandGreen,
+                  ),
+                  const SizedBox(height: 24),
                   Text(
-                    'Sign In / Sign Up',
+                    'Welcome to Menurai',
                     style: Theme.of(context).textTheme.headlineMedium,
                   ),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Sign in to save your preferences',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: AppColors.lightSecondaryText,
+                        ),
+                  ),
+                  const SizedBox(height: 48),
                   SocialAuthButtons(
                     onPressed: _handleSocialLogin,
                   ),
-                  const SizedBox(height: 30),
-                  const Text(
+                  const SizedBox(height: 24),
+                  Text(
                     'By continuing, you agree to our Terms of Service.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
               ),

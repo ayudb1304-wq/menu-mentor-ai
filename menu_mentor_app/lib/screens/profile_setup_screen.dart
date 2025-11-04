@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:menu_mentor_app/theme/app_colors.dart';
 
 class ProfileSetupScreen extends StatefulWidget {
   const ProfileSetupScreen({super.key});
@@ -36,6 +37,12 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   void dispose() {
     _restrictionsController.dispose();
     super.dispose();
+  }
+
+  void _toggleDiet(String diet) {
+    setState(() {
+      _selectedDiets[diet] = !(_selectedDiets[diet] ?? false);
+    });
   }
 
   Future<void> _saveProfile() async {
@@ -112,71 +119,63 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               children: [
                 Text(
                   'Select Your Diets',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Select any presets that apply to you.',
-                  style: Theme.of(context).textTheme.bodyMedium,
+                  style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 16),
                 Wrap(
                   spacing: 12.0,
                   runSpacing: 8.0,
                   children: _availableDiets.map((diet) {
-                    return FilterChip(
+                    final isSelected = _selectedDiets[diet] ?? false;
+                    return ChoiceChip(
                       label: Text(diet),
-                      selected: _selectedDiets[diet] ?? false,
-                      onSelected: (bool selected) {
-                        setState(() {
-                          _selectedDiets[diet] = selected;
-                        });
-                      },
-                      selectedColor: Theme.of(context).colorScheme.primary,
-                      checkmarkColor: Theme.of(context).colorScheme.onPrimary,
-                      labelStyle: TextStyle(
-                        color: _selectedDiets[diet] ?? false
-                            ? Theme.of(context).colorScheme.onPrimary
-                            : Theme.of(context).colorScheme.onSurface,
+                      selected: isSelected,
+                      onSelected: (selected) => _toggleDiet(diet),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8.0),
                       ),
+                      side: isSelected
+                          ? BorderSide.none
+                          : const BorderSide(color: AppColors.lightBorder),
+                      selectedColor: AppColors.brandBlue,
+                      labelStyle: TextStyle(
+                        color: isSelected
+                            ? Colors.white
+                            : AppColors.lightPrimaryText,
+                      ),
+                      backgroundColor: AppColors.lightBackground,
+                      showCheckmark: false,
                     );
                   }).toList(),
                 ),
                 const SizedBox(height: 32),
                 Text(
                   'Add Allergens & Restrictions',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                  style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Separate items with a comma (e.g., peanuts, shellfish, sesame).',
-                  style: Theme.of(context).textTheme.bodyMedium,
+                  'Separate items with a comma (e.g., peanuts, shellfish, gluten)',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.lightSecondaryText,
+                      ),
                 ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: _restrictionsController,
                   decoration: const InputDecoration(
-                    hintText: 'e.g., peanuts, shellfish, sesame',
-                    border: OutlineInputBorder(),
+                    hintText: 'e.g., peanuts, shellfish, gluten',
                   ),
                 ),
                 const SizedBox(height: 40),
-                Center(
-                  child: ElevatedButton(
-                    onPressed: _saveProfile,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 48,
-                        vertical: 16,
-                      ),
-                      textStyle: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    child: const Text('Save Profile & Continue'),
+                ElevatedButton(
+                  onPressed: _saveProfile,
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 52),
                   ),
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text('Save Profile & Continue'),
                 ),
               ],
             ),

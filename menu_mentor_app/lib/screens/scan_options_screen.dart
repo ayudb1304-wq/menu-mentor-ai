@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:menu_mentor_app/screens/analysis_screen.dart'; // <-- 1. ADD THIS IMPORT
+import 'package:menu_mentor_app/screens/analysis_screen.dart';
+import 'package:menu_mentor_app/theme/app_colors.dart';
 
 class ScanOptionsScreen extends StatefulWidget {
   const ScanOptionsScreen({super.key});
@@ -21,7 +22,7 @@ class _ScanOptionsScreenState extends State<ScanOptionsScreen> {
           child: Wrap(
             children: <Widget>[
               ListTile(
-                leading: const Icon(LucideIcons.camera),
+                leading: const Icon(LucideIcons.camera, color: AppColors.brandBlue),
                 title: const Text('Take Photo'),
                 onTap: () {
                   Navigator.pop(context);
@@ -29,7 +30,7 @@ class _ScanOptionsScreenState extends State<ScanOptionsScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(LucideIcons.image),
+                leading: const Icon(LucideIcons.image, color: AppColors.brandBlue),
                 title: const Text('Choose from Gallery'),
                 onTap: () {
                   Navigator.pop(context);
@@ -107,22 +108,30 @@ class _ScanOptionsScreenState extends State<ScanOptionsScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  Icon(LucideIcons.utensilsCrossed, size: 80.0, color: theme.colorScheme.primary),
+                  const Icon(LucideIcons.utensilsCrossed, size: 80.0, color: AppColors.brandGreen),
                   const SizedBox(height: 16),
-                  Text('Menu Mentor', textAlign: TextAlign.center, style: theme.textTheme.headlineMedium),
+                  Text(
+                    'Menu Mentor',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w600),
+                  ),
                   const SizedBox(height: 8),
-                  Text('Dine confidently...', textAlign: TextAlign.center, style: theme.textTheme.titleMedium),
+                  Text(
+                    'Dine confidently. Your personal menu guide.',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.titleMedium?.copyWith(color: AppColors.lightSecondaryText),
+                  ),
                   const SizedBox(height: 60),
                   ElevatedButton.icon(
                     icon: const Icon(LucideIcons.scanLine),
                     label: const Text('Scan Menu'),
                     onPressed: () => _handleScanMenuTap(context),
                     style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16.0),
-                      textStyle: theme.textTheme.titleLarge,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
-                      backgroundColor: theme.colorScheme.primary,
-                      foregroundColor: theme.colorScheme.onPrimary,
+                      padding: const EdgeInsets.symmetric(vertical: 18.0),
+                      textStyle: theme.textTheme.titleLarge?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
                 ],

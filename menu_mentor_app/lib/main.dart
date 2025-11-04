@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:menu_mentor_app/screens/auth_wrapper.dart';
+import 'package:menu_mentor_app/theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,10 +19,10 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Menu Mentor',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-      ),
+      title: 'Menurai',
+      theme: AppTheme.getLightTheme(),
+      darkTheme: AppTheme.getDarkTheme(),
+      themeMode: ThemeMode.system,
       home: const AuthWrapper(),
     );
   }
