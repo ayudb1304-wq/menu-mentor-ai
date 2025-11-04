@@ -67,10 +67,10 @@ class _AuthScreenState extends State<AuthScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
-                    LucideIcons.utensilsCrossed,
-                    size: 64,
-                    color: AppColors.brandGreen,
+                  Image.asset(
+                    'assets/images/menurai_logo.png',
+                    width: 120,
+                    height: 120,
                   ),
                   const SizedBox(height: 24),
                   Text(

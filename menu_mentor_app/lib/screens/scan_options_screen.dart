@@ -108,10 +108,14 @@ class _ScanOptionsScreenState extends State<ScanOptionsScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  const Icon(LucideIcons.utensilsCrossed, size: 80.0, color: AppColors.brandGreen),
+                  Image.asset(
+                    'assets/images/menurai_logo.png',
+                    width: 120,
+                    height: 120,
+                  ),
                   const SizedBox(height: 16),
                   Text(
-                    'Menu Mentor',
+                    'Menurai',
                     textAlign: TextAlign.center,
                     style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w600),
                   ),
