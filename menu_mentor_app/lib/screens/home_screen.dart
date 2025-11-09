@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:menu_mentor_app/screens/scan_options_screen.dart';
-import 'package:menu_mentor_app/screens/profile_screen.dart'; // <-- Our new screen
+import 'package:menu_mentor_app/screens/profile_screen.dart';
+import 'package:menu_mentor_app/widgets/animated_tab_bar.dart';
+import 'package:menu_mentor_app/theme/app_colors.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -30,30 +32,40 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    // Determine inactive color based on theme
+    final inactiveColor = isDark
+        ? AppColors.darkSecondaryText
+        : AppColors.lightSecondaryText;
+
     return Scaffold(
       // The body is just the currently selected screen
       body: Center(
         child: _widgetOptions.elementAt(_selectedIndex),
       ),
-      // The 200 IQ Bottom Navigation Bar
-      bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Icon(LucideIcons.home),
-            label: 'Home',
+      // Premium AnimatedTabBar replacing the standard BottomNavigationBar
+      bottomNavigationBar: AnimatedTabBar(
+        items: [
+          TabItem(
+            icon: const Icon(LucideIcons.home, size: 24),
+            activeColor: AppColors.brandBlue,
+            inactiveColor: inactiveColor,
           ),
-          BottomNavigationBarItem(
-            icon: Icon(LucideIcons.history),
-            label: 'History',
+          TabItem(
+            icon: const Icon(LucideIcons.history, size: 24),
+            activeColor: AppColors.brandGreen,
+            inactiveColor: inactiveColor,
           ),
-          BottomNavigationBarItem(
-            icon: Icon(LucideIcons.user),
-            label: 'Profile',
+          TabItem(
+            icon: const Icon(LucideIcons.user, size: 24),
+            activeColor: AppColors.brandBlue,
+            inactiveColor: inactiveColor,
           ),
         ],
-        currentIndex: _selectedIndex,
-        selectedItemColor: Theme.of(context).colorScheme.primary,
-        onTap: _onItemTapped,
+        initialIndex: _selectedIndex,
+        onTabChange: _onItemTapped,
       ),
     );
   }

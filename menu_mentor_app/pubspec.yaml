@@ -47,6 +47,8 @@ dependencies:
   cupertino_icons: ^1.0.8
   google_sign_in: ^7.2.0
   google_fonts: ^6.2.1
+  collection: ^1.19.1
+  dotted_border: ^3.1.0
 
 dev_dependencies:
   flutter_test:
