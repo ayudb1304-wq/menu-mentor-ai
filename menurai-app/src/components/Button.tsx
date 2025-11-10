@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   TouchableOpacity,
   Text,
@@ -7,6 +7,7 @@ import {
   ViewStyle,
   TextStyle,
   TouchableOpacityProps,
+  Platform,
 } from 'react-native';
 import { Colors } from '../theme/colors';
 import { Typography, BorderRadius, Spacing } from '../theme/styles';
@@ -19,6 +20,8 @@ interface ButtonProps extends TouchableOpacityProps {
   loading?: boolean;
   icon?: React.ReactNode;
   fullWidth?: boolean;
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -30,9 +33,12 @@ export const Button: React.FC<ButtonProps> = ({
   fullWidth = false,
   disabled,
   style,
+  accessibilityLabel,
+  accessibilityHint,
   ...props
 }) => {
   const { colors, isDarkMode } = useTheme();
+  const [isHovered, setIsHovered] = useState(false);
 
   const getButtonStyle = (): ViewStyle => {
     const baseStyle: ViewStyle = {
@@ -85,6 +91,14 @@ export const Button: React.FC<ButtonProps> = ({
       baseStyle.opacity = 0.6;
     }
 
+    // Hover state for web
+    if (Platform.OS === 'web' && isHovered && !disabled && !loading) {
+      baseStyle.opacity = 0.9;
+      if (variant === 'primary' || variant === 'secondary') {
+        baseStyle.transform = [{ scale: 1.02 }];
+      }
+    }
+
     return baseStyle;
   };
 
@@ -123,6 +137,12 @@ export const Button: React.FC<ButtonProps> = ({
       style={[getButtonStyle(), style]}
       disabled={disabled || loading}
       activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel || title}
+      accessibilityHint={accessibilityHint}
+      accessibilityState={{ disabled: disabled || loading }}
+      onMouseEnter={Platform.OS === 'web' ? () => setIsHovered(true) : undefined}
+      onMouseLeave={Platform.OS === 'web' ? () => setIsHovered(false) : undefined}
       {...props}
     >
       {loading ? (
