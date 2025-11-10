@@ -16,7 +16,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
 import { Colors } from '../theme/colors';
 import { Typography, Spacing, BorderRadius, Shadows } from '../theme/styles';
-import { Card, LoadingOverlay } from '../components';
+import { Card, LoadingOverlay, SkeletonHistoryItem, PageTransition, StaggeredList, GlassCard } from '../components';
 import historyService, { ScanHistory } from '../services/historyService';
 
 export const HistoryScreen: React.FC = () => {
@@ -149,7 +149,8 @@ export const HistoryScreen: React.FC = () => {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <PageTransition type="fade" duration={300}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {history.length === 0 ? (
         <View style={styles.emptyState}>
           <MaterialIcons name="history" size={64} color={colors.secondaryText} />
@@ -184,6 +185,7 @@ export const HistoryScreen: React.FC = () => {
         />
       )}
     </SafeAreaView>
+    </PageTransition>
   );
 };
 
