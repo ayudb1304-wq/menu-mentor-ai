@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import {
   TouchableOpacity,
   Text,
@@ -7,7 +7,10 @@ import {
   ViewStyle,
   TextStyle,
   TouchableOpacityProps,
+  Animated,
+  Platform,
 } from 'react-native';
+import { GradientView } from './GradientView';
 import { Colors } from '../theme/colors';
 import { Typography, BorderRadius, Spacing } from '../theme/styles';
 import { useTheme } from '../theme/ThemeContext';
@@ -30,53 +33,130 @@ export const Button: React.FC<ButtonProps> = ({
   fullWidth = false,
   disabled,
   style,
+  onPressIn,
+  onPressOut,
   ...props
 }) => {
   const { colors, isDarkMode } = useTheme();
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const iconRotateAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  // Pulse animation for primary buttons when not disabled
+  useEffect(() => {
+    if (variant === 'primary' && !disabled && !loading) {
+      const pulse = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.02,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      pulse.start();
+      return () => pulse.stop();
+    }
+  }, [variant, disabled, loading]);
+
+  const handlePressIn = (event: any) => {
+    // Scale down animation
+    Animated.spring(scaleAnim, {
+      toValue: 0.95,
+      useNativeDriver: true,
+    }).start();
+
+    // Rotate icon
+    if (icon) {
+      Animated.timing(iconRotateAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }
+
+    onPressIn?.(event);
+  };
+
+  const handlePressOut = (event: any) => {
+    // Scale back to normal
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      friction: 3,
+      useNativeDriver: true,
+    }).start();
+
+    // Rotate icon back
+    if (icon) {
+      Animated.timing(iconRotateAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }
+
+    onPressOut?.(event);
+  };
+
+  const iconRotation = iconRotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '15deg'],
+  });
+
+  const getGradientColors = (): [string, string] => {
+    switch (variant) {
+      case 'primary':
+        return ['#0066FF', '#00B4D8'];
+      case 'secondary':
+        return ['#38A169', '#68D391'];
+      default:
+        return [Colors.transparent, Colors.transparent];
+    }
+  };
 
   const getButtonStyle = (): ViewStyle => {
     const baseStyle: ViewStyle = {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      borderRadius: BorderRadius.md,
+      borderRadius: size === 'large' ? BorderRadius.full : BorderRadius.lg,
+      overflow: 'hidden',
       ...(fullWidth && { width: '100%' }),
     };
 
     // Size styles
     switch (size) {
       case 'small':
-        baseStyle.paddingHorizontal = Spacing.sm;
-        baseStyle.paddingVertical = Spacing.xs;
-        baseStyle.minHeight = 32;
+        baseStyle.paddingHorizontal = Spacing.md;
+        baseStyle.paddingVertical = Spacing.sm;
+        baseStyle.minHeight = 36;
         break;
       case 'large':
-        baseStyle.paddingHorizontal = Spacing.lg;
-        baseStyle.paddingVertical = Spacing.md;
+        baseStyle.paddingHorizontal = Spacing.xl;
+        baseStyle.paddingVertical = Spacing.md + 2;
         baseStyle.minHeight = 56;
         break;
       default: // medium
-        baseStyle.paddingHorizontal = Spacing.md;
-        baseStyle.paddingVertical = Spacing.sm + 2;
-        baseStyle.minHeight = 44;
+        baseStyle.paddingHorizontal = Spacing.lg;
+        baseStyle.paddingVertical = Spacing.sm + 4;
+        baseStyle.minHeight = 48;
         break;
     }
 
-    // Variant styles
+    // Variant styles for non-gradient variants
     switch (variant) {
-      case 'primary':
-        baseStyle.backgroundColor = Colors.brand.blue;
-        break;
-      case 'secondary':
-        baseStyle.backgroundColor = Colors.brand.green;
-        break;
       case 'outline':
         baseStyle.backgroundColor = Colors.transparent;
-        baseStyle.borderWidth = 1;
-        baseStyle.borderColor = colors.border;
+        baseStyle.borderWidth = 2;
+        baseStyle.borderColor = Colors.brand.blue;
         break;
       case 'ghost':
-        baseStyle.backgroundColor = Colors.transparent;
+        baseStyle.backgroundColor = colors.background;
         break;
     }
 
@@ -86,6 +166,27 @@ export const Button: React.FC<ButtonProps> = ({
     }
 
     return baseStyle;
+  };
+
+  const getContainerStyle = (): ViewStyle => {
+    const containerStyle: ViewStyle = {
+      overflow: 'hidden',
+      borderRadius: size === 'large' ? BorderRadius.full : BorderRadius.lg,
+    };
+
+    // Add shadow for primary and secondary variants
+    if ((variant === 'primary' || variant === 'secondary') && !disabled) {
+      containerStyle.shadowColor = variant === 'primary' ? '#0066FF' : '#38A169';
+      containerStyle.shadowOffset = {
+        width: 0,
+        height: 4,
+      };
+      containerStyle.shadowOpacity = 0.3;
+      containerStyle.shadowRadius = 8;
+      containerStyle.elevation = 8;
+    }
+
+    return containerStyle;
   };
 
   const getTextStyle = (): TextStyle => {
@@ -110,6 +211,8 @@ export const Button: React.FC<ButtonProps> = ({
         baseStyle.color = Colors.white;
         break;
       case 'outline':
+        baseStyle.color = Colors.brand.blue;
+        break;
       case 'ghost':
         baseStyle.color = colors.primaryText;
         break;
@@ -118,13 +221,8 @@ export const Button: React.FC<ButtonProps> = ({
     return baseStyle;
   };
 
-  return (
-    <TouchableOpacity
-      style={[getButtonStyle(), style]}
-      disabled={disabled || loading}
-      activeOpacity={0.7}
-      {...props}
-    >
+  const renderContent = () => (
+    <>
       {loading ? (
         <ActivityIndicator
           size={size === 'small' ? 'small' : 'small'}
@@ -132,10 +230,75 @@ export const Button: React.FC<ButtonProps> = ({
         />
       ) : (
         <>
-          {icon}
+          {icon && (
+            <Animated.View
+              style={{
+                transform: [{ rotate: iconRotation }],
+              }}
+            >
+              {icon}
+            </Animated.View>
+          )}
           <Text style={getTextStyle()}>{title}</Text>
         </>
       )}
-    </TouchableOpacity>
+    </>
+  );
+
+  const animatedStyle = {
+    transform: [
+      { scale: scaleAnim },
+      ...(variant === 'primary' && !disabled && !loading ? [{ scale: pulseAnim }] : []),
+    ],
+  };
+
+  if (variant === 'primary' || variant === 'secondary') {
+    return (
+      <Animated.View style={[getContainerStyle(), animatedStyle, style]}>
+        <TouchableOpacity
+          style={getButtonStyle()}
+          disabled={disabled || loading}
+          activeOpacity={0.9}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
+          {...props}
+        >
+          <GradientView
+            colors={getGradientColors()}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.gradient}
+          >
+            {renderContent()}
+          </GradientView>
+        </TouchableOpacity>
+      </Animated.View>
+    );
+  }
+
+  return (
+    <Animated.View style={[animatedStyle, style]}>
+      <TouchableOpacity
+        style={[getButtonStyle(), getContainerStyle()]}
+        disabled={disabled || loading}
+        activeOpacity={0.7}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        {...props}
+      >
+        {renderContent()}
+      </TouchableOpacity>
+    </Animated.View>
   );
 };
+
+const styles = StyleSheet.create({
+  gradient: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm + 4,
+  },
+});

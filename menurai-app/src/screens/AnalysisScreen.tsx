@@ -14,7 +14,7 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
 import { Colors } from '../theme/colors';
 import { Typography, Spacing, BorderRadius } from '../theme/styles';
-import { Button, Card, LoadingOverlay } from '../components';
+import { Button, Card, LoadingOverlay, SkeletonMenuItem, PageTransition, PulseLoader, GlassCard, SuccessCheckmark, HeroTransition, PressableWithFeedback } from '../components';
 import { ScanStackParamList } from '../navigation/types';
 import menuAnalysisService, { MenuItem, AnalysisResult } from '../services/menuAnalysisService';
 import historyService from '../services/historyService';
@@ -116,7 +116,11 @@ const MenuItemCard: React.FC<{ item: MenuItem }> = ({ item }) => {
   };
 
   return (
-    <Card style={[styles.itemCard, { borderColor: getClassificationColor() }]}>
+    <Card 
+      variant="elevated" 
+      style={[styles.itemCard, { borderColor: getClassificationColor() }]}
+      pressable
+    >
       <View style={styles.itemHeader}>
         <MaterialIcons
           name={getClassificationIcon()}
@@ -148,6 +152,7 @@ export const AnalysisScreen: React.FC = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
     if (imageUri) {
@@ -162,6 +167,10 @@ export const AnalysisScreen: React.FC = () => {
     try {
       const result = await menuAnalysisService.processMenuImage(imageUri);
       setAnalysisResult(result);
+      
+      // Show success animation
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 2000);
 
       // Save to history
       try {
@@ -199,26 +208,39 @@ export const AnalysisScreen: React.FC = () => {
 
   if (isAnalyzing) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.loadingContainer}>
-          <Image source={{ uri: imageUri }} style={styles.previewImage} resizeMode="cover" />
-          <View style={styles.loadingContent}>
-            <MaterialIcons name="restaurant-menu" size={48} color={Colors.brand.blue} />
-            <LoadingText />
-            <Text style={[styles.loadingHint, { color: colors.secondaryText }]}>
-              This may take up to 30 seconds
-            </Text>
+      <PageTransition type="zoomIn" duration={400}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <View style={styles.imageContainer}>
+            <Image source={{ uri: imageUri }} style={styles.resultImage} resizeMode="cover" />
           </View>
-        </View>
+          <View style={styles.loadingContainer}>
+            <View style={styles.loadingContent}>
+              <MaterialIcons name="restaurant-menu" size={48} color={Colors.brand.blue} />
+              <LoadingText />
+              <Text style={[styles.loadingHint, { color: colors.secondaryText }]}>
+                This may take up to 30 seconds
+              </Text>
+            </View>
+          </View>
+          <View style={styles.skeletonSection}>
+            <SkeletonMenuItem />
+            <SkeletonMenuItem />
+            <SkeletonMenuItem />
+            <SkeletonMenuItem />
+          </View>
+        </ScrollView>
       </SafeAreaView>
+      </PageTransition>
     );
   }
 
   const { compliant, modifiable, nonCompliant } = getCategorizedItems();
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+    <PageTransition type="slideUp" duration={400}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Image Preview */}
         <View style={styles.imageContainer}>
           <Image source={{ uri: imageUri }} style={styles.resultImage} resizeMode="cover" />
@@ -270,7 +292,9 @@ export const AnalysisScreen: React.FC = () => {
                   Safe to Eat
                 </Text>
                 {compliant.map((item, index) => (
-                  <MenuItemCard key={`compliant-${index}`} item={item} />
+                  <HeroTransition key={`compliant-${index}`} delay={index * 80} duration={500}>
+                    <MenuItemCard item={item} />
+                  </HeroTransition>
                 ))}
               </View>
             )}
@@ -322,6 +346,7 @@ export const AnalysisScreen: React.FC = () => {
         </View>
       </ScrollView>
     </SafeAreaView>
+    </PageTransition>
   );
 };
 
@@ -334,10 +359,13 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.xl,
   },
   loadingContainer: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: Spacing.lg,
+  },
+  skeletonSection: {
+    padding: Spacing.lg,
+    paddingTop: 0,
   },
   previewImage: {
     width: '100%',
