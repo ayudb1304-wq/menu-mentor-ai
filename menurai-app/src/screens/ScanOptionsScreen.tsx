@@ -26,6 +26,9 @@ import {
   PageTransition,
   PulseLoader,
   GlassModal,
+  EmptyState,
+  PressableWithFeedback,
+  RevealAnimation,
 } from '../components';
 import { ScanStackParamList } from '../navigation/types';
 import historyService, { ScanHistory } from '../services/historyService';
@@ -234,12 +237,12 @@ export const ScanOptionsScreen: React.FC = () => {
                 <SkeletonHistoryItem />
               </View>
             ) : recentScans.length === 0 ? (
-              <View style={[styles.emptyState, { borderColor: colors.border }]}>
-                <MaterialIcons name="history" size={32} color={colors.secondaryText} />
-                <Text style={[styles.emptyText, { color: colors.secondaryText }]}>
-                  No recent scans yet
-                </Text>
-              </View>
+              <EmptyState
+                icon="clock"
+                iconSet="Feather"
+                title="No Recent Scans"
+                description="Your recent scans will appear here after you analyze menus"
+              />
             ) : (
               <View style={styles.recentList}>
                 {recentScans.map((scan) => {
@@ -249,7 +252,8 @@ export const ScanOptionsScreen: React.FC = () => {
                   const nonCompliant = scan.items.filter(i => i.classification === 'non_compliant').length;
 
                   return (
-                    <Card 
+                    <RevealAnimation direction="bottom" delay={index * 100}>
+                      <Card 
                       key={scan.id} 
                       style={styles.recentCard}
                       variant="elevated"
@@ -287,6 +291,7 @@ export const ScanOptionsScreen: React.FC = () => {
                         </View>
                       </View>
                     </Card>
+                    </RevealAnimation>
                   );
                 })}
               </View>

@@ -16,7 +16,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
 import { Colors } from '../theme/colors';
 import { Typography, Spacing, BorderRadius, Shadows } from '../theme/styles';
-import { Card, LoadingOverlay, SkeletonHistoryItem, PageTransition, StaggeredList, GlassCard } from '../components';
+import { Card, LoadingOverlay, SkeletonHistoryItem, PageTransition, StaggeredList, GlassCard, SwipeableCard, EmptyState, EnhancedRefresh, HeroTransition } from '../components';
 import historyService, { ScanHistory } from '../services/historyService';
 
 export const HistoryScreen: React.FC = () => {
@@ -77,12 +77,29 @@ export const HistoryScreen: React.FC = () => {
     return { compliant, modifiable, nonCompliant };
   };
 
-  const renderScanItem = ({ item }: { item: ScanHistory }) => {
+  const renderScanItem = ({ item, index }: { item: ScanHistory; index: number }) => {
     const { compliant, modifiable, nonCompliant } = getCategoryCounts(item.items);
     const scanDate = item.scanDate?.toDate ? item.scanDate.toDate() : new Date();
 
     return (
-      <Card 
+      <HeroTransition delay={index * 50} duration={400}>
+        <SwipeableCard
+          leftAction={{
+            icon: 'trash-2',
+            color: Colors.semantic.nonCompliant,
+            onPress: () => handleDeleteScan(item.id),
+            label: 'Delete',
+          }}
+          rightAction={{
+            icon: 'share-2',
+            color: Colors.brand.blue,
+            onPress: () => {
+              Alert.alert('Share', `Share scan from ${format(scanDate, 'MMM d, yyyy')}`);
+            },
+            label: 'Share',
+          }}
+        >
+          <Card 
         style={styles.scanCard}
         variant="elevated"
         pressable
@@ -140,6 +157,8 @@ export const HistoryScreen: React.FC = () => {
           <Image source={{ uri: item.imageUrl }} style={styles.thumbnailImage} resizeMode="cover" />
         )}
       </Card>
+        </SwipeableCard>
+      </HeroTransition>
     );
   };
 
@@ -163,13 +182,14 @@ export const HistoryScreen: React.FC = () => {
     <PageTransition type="fade" duration={300}>
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {history.length === 0 ? (
-        <View style={styles.emptyState}>
-          <MaterialIcons name="history" size={64} color={colors.secondaryText} />
-          <Text style={[styles.emptyTitle, { color: colors.primaryText }]}>No Scan History</Text>
-          <Text style={[styles.emptyText, { color: colors.secondaryText }]}>
-            Your menu scans will appear here
-          </Text>
-        </View>
+        <EmptyState
+          icon="history"
+          iconSet="MaterialIcons"
+          title="No Scan History"
+          description="Your menu scans will appear here. Start scanning to build your history!"
+          actionLabel="Scan Now"
+          onAction={() => navigation.navigate('Scan' as never)}
+        />
       ) : (
         <FlatList
           data={history}
@@ -178,11 +198,9 @@ export const HistoryScreen: React.FC = () => {
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl
+            <EnhancedRefresh
               refreshing={refreshing}
               onRefresh={handleRefresh}
-              colors={[Colors.brand.blue]}
-              tintColor={Colors.brand.blue}
             />
           }
           ListHeaderComponent={
