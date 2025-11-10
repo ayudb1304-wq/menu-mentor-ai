@@ -14,7 +14,7 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
 import { Colors } from '../theme/colors';
 import { Typography, Spacing, BorderRadius } from '../theme/styles';
-import { Button, Card, LoadingOverlay, SkeletonMenuItem } from '../components';
+import { Button, Card, LoadingOverlay, SkeletonMenuItem, PageTransition, PulseLoader, GlassCard } from '../components';
 import { ScanStackParamList } from '../navigation/types';
 import menuAnalysisService, { MenuItem, AnalysisResult } from '../services/menuAnalysisService';
 import historyService from '../services/historyService';
@@ -203,7 +203,8 @@ export const AnalysisScreen: React.FC = () => {
 
   if (isAnalyzing) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <PageTransition type="zoomIn" duration={400}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <View style={styles.imageContainer}>
             <Image source={{ uri: imageUri }} style={styles.resultImage} resizeMode="cover" />
@@ -225,14 +226,16 @@ export const AnalysisScreen: React.FC = () => {
           </View>
         </ScrollView>
       </SafeAreaView>
+      </PageTransition>
     );
   }
 
   const { compliant, modifiable, nonCompliant } = getCategorizedItems();
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+    <PageTransition type="slideUp" duration={400}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Image Preview */}
         <View style={styles.imageContainer}>
           <Image source={{ uri: imageUri }} style={styles.resultImage} resizeMode="cover" />
@@ -336,6 +339,7 @@ export const AnalysisScreen: React.FC = () => {
         </View>
       </ScrollView>
     </SafeAreaView>
+    </PageTransition>
   );
 };
 
