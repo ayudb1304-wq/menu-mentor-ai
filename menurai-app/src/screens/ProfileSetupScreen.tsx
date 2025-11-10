@@ -10,11 +10,11 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { Colors } from '../theme/colors';
 import { Typography, Spacing, BorderRadius } from '../theme/styles';
 import { Button, Chip, LoadingOverlay, Card } from '../components';
+import { Info } from '../components/icons';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { DIETARY_PRESETS } from '../services/userService';
 import { useNavigation, useRoute, RouteProp, CommonActions } from '@react-navigation/native';
@@ -138,14 +138,15 @@ export const ProfileSetupScreen: React.FC = () => {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' && Platform.OS !== 'web' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.flex}
-        enabled={Platform.OS !== 'web'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          bounces={true}
         >
           {/* Header */}
           <View style={styles.header}>
@@ -157,7 +158,7 @@ export const ProfileSetupScreen: React.FC = () => {
             </Text>
             {isEditMode && isFreeEdit && (
               <View style={[styles.freeEditNotice, { backgroundColor: Colors.brand.blue + '20' }]}>
-                <MaterialIcons name="info" size={16} color={Colors.brand.blue} />
+                <Info size={16} color={Colors.brand.blue} />
                 <Text style={[styles.freeEditText, { color: Colors.brand.blue }]}>
                   You're using your one-time free edit. After this, changes will be locked for 30 days.
                 </Text>
@@ -205,7 +206,7 @@ export const ProfileSetupScreen: React.FC = () => {
                   styles.input,
                   {
                     color: colors.primaryText,
-                    backgroundColor: colors.background,
+                    backgroundColor: colors.card,
                     borderColor: colors.border,
                   },
                 ]}
@@ -215,12 +216,14 @@ export const ProfileSetupScreen: React.FC = () => {
                 onChangeText={setCustomRestriction}
                 onSubmitEditing={addCustomRestriction}
                 returnKeyType="done"
+                blurOnSubmit={false}
               />
               <Button
                 title="Add"
                 size="small"
                 onPress={addCustomRestriction}
                 disabled={!customRestriction.trim()}
+                style={styles.addButton}
               />
             </View>
 
@@ -277,7 +280,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     padding: Spacing.lg,
-    paddingBottom: Spacing.xl * 2, // Extra padding for bottom actions
+    paddingBottom: Spacing.xl * 3, // Extra padding for bottom actions and keyboard
   },
   header: {
     marginBottom: Spacing.xl,
@@ -319,15 +322,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: Spacing.md,
+    gap: Spacing.sm,
   },
   input: {
     flex: 1,
     borderWidth: 1,
     borderRadius: BorderRadius.md,
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    marginRight: Spacing.sm,
+    paddingVertical: Spacing.sm + 2,
+    minHeight: 44,
     ...Typography.body,
+  },
+  addButton: {
+    minWidth: 70,
+    paddingHorizontal: Spacing.md,
   },
   restrictionsContainer: {
     flexDirection: 'row',

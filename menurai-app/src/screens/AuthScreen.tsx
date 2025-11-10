@@ -16,6 +16,7 @@ import { Typography, Spacing, BorderRadius } from '../theme/styles';
 import { SocialAuthButtons } from '../components/SocialAuthButtons';
 import { LoadingOverlay } from '../components';
 import { useAuth } from '../hooks/useAuth';
+import { AppAssets } from '../config/assets';
 
 export const AuthScreen: React.FC = () => {
   const { colors, isDarkMode } = useTheme();
@@ -45,15 +46,18 @@ export const AuthScreen: React.FC = () => {
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.flex}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          bounces={true}
+          keyboardShouldPersistTaps="handled"
         >
           {/* Logo Section */}
           <View style={styles.logoSection}>
             <Image
-              source={require('../assets/images/menurai_logo.png')}
+              source={AppAssets.logo}
               style={styles.logo}
               resizeMode="contain"
             />
@@ -104,6 +108,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.xl,
+    paddingBottom: Spacing.xxl,
   },
   logoSection: {
     alignItems: 'center',

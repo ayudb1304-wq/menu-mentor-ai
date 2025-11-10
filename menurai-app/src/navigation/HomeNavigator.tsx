@@ -88,7 +88,6 @@ export const HomeNavigator: React.FC = () => {
         name="Profile"
         component={ProfileScreen}
         options={{
-          title: 'Profile',
           headerShown: false,
         }}
       />
