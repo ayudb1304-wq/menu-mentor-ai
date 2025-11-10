@@ -13,6 +13,7 @@ import { ArrowLeft, Menu, Bell } from './icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
 import { Typography, Spacing, Shadows } from '../theme/styles';
+import { AppAssets } from '../config/assets';
 
 interface AppHeaderProps {
   title?: string;
@@ -76,7 +77,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           ) : (
             <View style={styles.logoContainer}>
               <Image
-                source={require('../../assets/icon.png')}
+                source={AppAssets.icon}
                 style={styles.logoImage}
                 resizeMode="contain"
               />

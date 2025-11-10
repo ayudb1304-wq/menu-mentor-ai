@@ -16,6 +16,7 @@ import { Typography, Spacing, BorderRadius } from '../theme/styles';
 import { SocialAuthButtons } from '../components/SocialAuthButtons';
 import { LoadingOverlay } from '../components';
 import { useAuth } from '../hooks/useAuth';
+import { AppAssets } from '../config/assets';
 
 export const AuthScreen: React.FC = () => {
   const { colors, isDarkMode } = useTheme();
@@ -56,7 +57,7 @@ export const AuthScreen: React.FC = () => {
           {/* Logo Section */}
           <View style={styles.logoSection}>
             <Image
-              source={require('../../assets/icon.png')}
+              source={AppAssets.logo}
               style={styles.logo}
               resizeMode="contain"
             />
