@@ -145,7 +145,7 @@ export const ScanOptionsScreen: React.FC = () => {
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <View style={[styles.iconContainer, { backgroundColor: colors.background }]}>
+      <View style={[styles.iconContainer, { backgroundColor: colors.container }]}>
         {icon}
       </View>
       <Text style={[styles.optionTitle, { color: colors.primaryText }]}>{title}</Text>
@@ -156,7 +156,7 @@ export const ScanOptionsScreen: React.FC = () => {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.container }]}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}

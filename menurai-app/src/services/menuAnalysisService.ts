@@ -18,15 +18,17 @@ export interface MenuItem {
 
 export interface AnalysisResult {
   items: MenuItem[];
-  imageUrl?: string;
+  imageUrl?: string; // gs:// URL for Cloud Function
+  downloadUrl?: string; // Download URL for display
   timestamp?: Date;
 }
 
 class MenuAnalysisService {
   /**
    * Upload image to Firebase Storage
+   * Returns both gs:// URL (for Cloud Function) and download URL (for display)
    */
-  async uploadImage(imageUri: string): Promise<string> {
+  async uploadImage(imageUri: string): Promise<{ gsUrl: string; downloadUrl: string }> {
     try {
       const user = auth.currentUser;
       if (!user) {
@@ -59,9 +61,10 @@ class MenuAnalysisService {
       // Get the download URL
       const downloadUrl = await getDownloadURL(snapshot.ref);
 
-      // Return the gs:// URL for the Cloud Function
+      // Get the gs:// URL for the Cloud Function
       const gsUrl = `gs://${snapshot.metadata.bucket}/${snapshot.metadata.fullPath}`;
-      return gsUrl;
+      
+      return { gsUrl, downloadUrl };
     } catch (error) {
       console.error('Error uploading image:', error);
       throw new Error('Failed to upload image. Please try again.');
@@ -71,7 +74,7 @@ class MenuAnalysisService {
   /**
    * Analyze menu using Cloud Function
    */
-  async analyzeMenu(imageUrl: string): Promise<AnalysisResult> {
+  async analyzeMenu(gsUrl: string, downloadUrl: string): Promise<AnalysisResult> {
     try {
       console.log('Calling analyzeMenu Cloud Function...');
 
@@ -96,10 +99,10 @@ class MenuAnalysisService {
 
       console.log('Sending request with userProfile:', formattedProfile);
 
-      // Call the Cloud Function with both imageUrl and userProfile
+      // Call the Cloud Function with gs:// URL (for Cloud Function)
       const analyzeMenuFunction = httpsCallable(functions, 'analyzeMenu');
       const result = await analyzeMenuFunction({
-        imageUrl,
+        imageUrl: gsUrl,
         userProfile: formattedProfile
       });
 
@@ -114,7 +117,8 @@ class MenuAnalysisService {
 
       return {
         items: data.items,
-        imageUrl,
+        imageUrl: gsUrl,
+        downloadUrl: downloadUrl,
         timestamp: new Date(),
       };
     } catch (error: any) {
@@ -138,11 +142,11 @@ class MenuAnalysisService {
    */
   async processMenuImage(imageUri: string): Promise<AnalysisResult> {
     try {
-      // Step 1: Upload image
-      const imageUrl = await this.uploadImage(imageUri);
+      // Step 1: Upload image (returns both gs:// and download URL)
+      const { gsUrl, downloadUrl } = await this.uploadImage(imageUri);
 
-      // Step 2: Analyze menu
-      const result = await this.analyzeMenu(imageUrl);
+      // Step 2: Analyze menu (use gs:// URL for Cloud Function)
+      const result = await this.analyzeMenu(gsUrl, downloadUrl);
 
       return result;
     } catch (error) {

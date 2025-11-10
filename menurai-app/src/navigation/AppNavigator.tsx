@@ -62,7 +62,7 @@ export const AppNavigator: React.FC = () => {
               name="ProfileSetup"
               component={ProfileSetupScreen}
               options={{
-                header: () => <AppHeader title="Welcome to Menurai" />,
+                header: () => <AppHeader />,
               }}
             />
           ) : (
@@ -77,7 +77,7 @@ export const AppNavigator: React.FC = () => {
                 name="ProfileSetup"
                 component={ProfileSetupScreen}
                 options={{
-                  header: () => <AppHeader title="Edit Profile" showBackButton />,
+                  header: () => <AppHeader />,
                 }}
               />
             </>

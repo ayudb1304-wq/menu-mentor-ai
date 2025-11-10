@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 
     <!-- Viewport and Mobile Optimization -->
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes, viewport-fit=cover, shrink-to-fit=no" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -40,6 +40,7 @@
         margin: 0;
         padding: 0;
         position: relative;
+        background-color: #F9F5EC;
       }
 
       /* Safari-specific fixes */
@@ -64,6 +65,7 @@
         width: 100%;
         flex: 1;
         position: relative;
+        background-color: #F9F5EC;
       }
 
       /* Prevent text size adjustment on orientation change */
@@ -88,6 +90,144 @@
       [data-scrollable="true"] {
         overflow-y: scroll;
         -webkit-overflow-scrolling: touch;
+      }
+
+      /* Web-specific responsive styles */
+      @media (max-width: 768px) {
+        #root {
+          max-width: 100%;
+        }
+      }
+
+      /* Desktop responsive container */
+      @media (min-width: 769px) {
+        #root {
+          max-width: 414px;
+          margin: 0 auto;
+          box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+      }
+
+      /* Ensure buttons are clickable on web */
+      button,
+      [role="button"],
+      [data-testid],
+      div[onClick],
+      a {
+        cursor: pointer;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+      }
+
+      /* Improve touch targets on web */
+      @media (hover: hover) and (pointer: fine) {
+        button:hover,
+        [role="button"]:hover,
+        div[onClick]:hover {
+          opacity: 0.8;
+          transition: opacity 0.2s ease;
+        }
+      }
+
+      /* Prevent text selection on interactive elements */
+      button,
+      [role="button"],
+      div[onClick] {
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        -khtml-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+      }
+
+      /* Smooth scrolling */
+      * {
+        -webkit-overflow-scrolling: touch;
+      }
+
+      /* Fix for React Native Web touch events */
+      [data-rnw] {
+        touch-action: manipulation;
+      }
+
+      /* Ensure proper rendering on all devices */
+      * {
+        box-sizing: border-box;
+      }
+
+      /* Improve font rendering */
+      body {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeLegibility;
+      }
+
+      /* Responsive font sizing */
+      @media (max-width: 320px) {
+        html {
+          font-size: 14px;
+        }
+      }
+
+      @media (min-width: 321px) and (max-width: 768px) {
+        html {
+          font-size: 16px;
+        }
+      }
+
+      @media (min-width: 769px) {
+        html {
+          font-size: 16px;
+        }
+      }
+
+      /* React Native Web specific styles */
+      [class*="rn-"] {
+        box-sizing: border-box;
+      }
+
+      /* Ensure TouchableOpacity works on web */
+      div[class*="TouchableOpacity"],
+      div[class*="Pressable"],
+      button[class*="Button"] {
+        cursor: pointer;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      /* Fix for ScrollView on web */
+      div[class*="ScrollView"] {
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      /* Ensure proper flex layout on web */
+      div[style*="flex"] {
+        display: flex;
+      }
+
+      /* Fix for SafeAreaView on web */
+      div[class*="SafeAreaView"] {
+        width: 100%;
+        height: 100%;
+      }
+
+      /* Improve button responsiveness */
+      button,
+      [role="button"] {
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+        tap-highlight-color: rgba(0, 0, 0, 0);
+      }
+
+      /* Prevent double-tap zoom on buttons */
+      button:active,
+      [role="button"]:active {
+        transform: scale(0.98);
+        transition: transform 0.1s;
       }
     </style>
   </head>

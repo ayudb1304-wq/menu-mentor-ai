@@ -17,7 +17,7 @@ export const AuthWrapper: React.FC<AuthWrapperProps> = ({ children }) => {
   // Show loading while checking auth state
   if (authLoading || (user && profileLoading)) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: colors.container }]}>
         <LoadingOverlay visible={true} message="Loading..." fullScreen={false} />
       </View>
     );

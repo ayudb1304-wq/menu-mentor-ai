@@ -20,6 +20,8 @@ export interface UserProfile {
   customRestrictions: string[];
   lastDietUpdate: Timestamp | null;
   hasUsedFreeEdit: boolean; // Track if user has used their free edit after initial setup
+  isPremium: boolean; // Premium subscription status
+  scanCount: number; // Track number of scans for freemium users
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -81,6 +83,8 @@ class UserService {
           customRestrictions: [],
           lastDietUpdate: null,
           hasUsedFreeEdit: false, // New users haven't used their free edit yet
+          isPremium: false, // Default to free tier
+          scanCount: 0, // New users start with 0 scans
           createdAt: serverTimestamp() as Timestamp,
           updatedAt: serverTimestamp() as Timestamp,
         };
@@ -176,6 +180,52 @@ class UserService {
       daysRemaining,
       isFreeEdit: false,
     };
+  }
+
+  /**
+   * Check if user can scan (freemium limit: 5 scans)
+   */
+  canScan(profile: UserProfile | null): boolean {
+    if (!profile) return false;
+    if (profile.isPremium) return true; // Premium users have unlimited scans
+    const currentCount = profile.scanCount ?? 0; // Default to 0 if undefined
+    return currentCount < 5; // Free users limited to 5 scans
+  }
+
+  /**
+   * Get remaining scans for free users
+   */
+  getRemainingScans(profile: UserProfile | null): number {
+    if (!profile) return 0;
+    if (profile.isPremium) return -1; // -1 means unlimited
+    const currentCount = profile.scanCount ?? 0; // Default to 0 if undefined
+    return Math.max(0, 5 - currentCount);
+  }
+
+  /**
+   * Increment scan count for user
+   */
+  async incrementScanCount(uid: string): Promise<void> {
+    try {
+      const userRef = doc(db, 'users', uid);
+      const profile = await this.getUserProfile(uid);
+      
+      if (!profile) {
+        throw new Error('User profile not found');
+      }
+
+      // Only increment if user is not premium
+      if (!profile.isPremium) {
+        const currentCount = profile.scanCount ?? 0; // Default to 0 if undefined
+        await updateDoc(userRef, {
+          scanCount: currentCount + 1,
+          updatedAt: serverTimestamp(),
+        });
+      }
+    } catch (error) {
+      console.error('Error incrementing scan count:', error);
+      throw error;
+    }
   }
 
   /**

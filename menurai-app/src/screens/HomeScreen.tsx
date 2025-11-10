@@ -7,7 +7,7 @@ export const HomeScreen: React.FC = () => {
   const { colors } = useTheme();
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.container }]}>
       <Text style={[styles.text, { color: colors.primaryText }]}>
         Home Screen - Scan Options will go here
       </Text>

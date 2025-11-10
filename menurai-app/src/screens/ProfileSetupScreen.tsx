@@ -136,7 +136,7 @@ export const ProfileSetupScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.container }]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' && Platform.OS !== 'web' ? 'padding' : undefined}
         style={styles.flex}
@@ -147,23 +147,24 @@ export const ProfileSetupScreen: React.FC = () => {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={[styles.title, { color: colors.primaryText }]}>
-              {isEditMode ? 'Edit Dietary Profile' : 'Setup Your Dietary Profile'}
-            </Text>
-            <Text style={[styles.subtitle, { color: colors.secondaryText }]}>
-              Help us understand your dietary needs for personalized menu analysis
-            </Text>
-            {isEditMode && isFreeEdit && (
-              <View style={[styles.freeEditNotice, { backgroundColor: Colors.brand.blue + '20' }]}>
-                <Info size={16} color={Colors.brand.blue} />
-                <Text style={[styles.freeEditText, { color: Colors.brand.blue }]}>
-                  You're using your one-time free edit. After this, changes will be locked for 30 days.
-                </Text>
-              </View>
-            )}
-          </View>
+          {/* Description */}
+          {!isEditMode && (
+            <View style={styles.descriptionContainer}>
+              <Text style={[styles.description, { color: colors.secondaryText }]}>
+                Help us understand your dietary needs for personalized menu analysis
+              </Text>
+            </View>
+          )}
+
+          {/* Free Edit Notice */}
+          {isEditMode && isFreeEdit && (
+            <View style={[styles.freeEditNotice, { backgroundColor: Colors.brand.blue + '20' }]}>
+              <Info size={16} color={Colors.brand.blue} />
+              <Text style={[styles.freeEditText, { color: Colors.brand.blue }]}>
+                You're using your one-time free edit. After this, changes will be locked for 30 days.
+              </Text>
+            </View>
+          )}
 
           {/* Dietary Presets */}
           <Card style={styles.section}>
@@ -172,7 +173,7 @@ export const ProfileSetupScreen: React.FC = () => {
                 Dietary Preferences
               </Text>
               {isEditMode && !canEditDietaryPresets && (
-                <Text style={[styles.lockText, { color: Colors.semantic.warning }]}>
+                <Text style={[styles.lockText, { color: Colors.light.warning }]}>
                   Locked for {daysRemainingForEdit} days
                 </Text>
               )}
@@ -279,14 +280,10 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     paddingBottom: Spacing.xl * 2, // Extra padding for bottom actions
   },
-  header: {
-    marginBottom: Spacing.xl,
+  descriptionContainer: {
+    marginBottom: Spacing.lg,
   },
-  title: {
-    ...Typography.h2,
-    marginBottom: Spacing.sm,
-  },
-  subtitle: {
+  description: {
     ...Typography.body,
   },
   section: {

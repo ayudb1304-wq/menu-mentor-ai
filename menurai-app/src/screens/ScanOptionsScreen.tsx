@@ -12,8 +12,9 @@ import {
 } from 'react-native';
 import { Camera, ImageIcon, CheckCircle, X, Utensils, Info, XCircle } from '../components/icons';
 import * as ImagePicker from 'expo-image-picker';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { ScanStackParamList } from '../navigation/types';
 import { format } from 'date-fns';
 import { useTheme } from '../theme/ThemeContext';
 import { Colors } from '../theme/colors';
@@ -30,27 +31,33 @@ import {
   PressableWithFeedback,
   RevealAnimation,
 } from '../components';
-import { ScanStackParamList } from '../navigation/types';
 import historyService, { ScanHistory } from '../services/historyService';
+import { useUserProfile } from '../hooks/useUserProfile';
 
 type NavigationProp = StackNavigationProp<ScanStackParamList, 'ScanOptions'>;
 
 export const ScanOptionsScreen: React.FC = () => {
   const { colors } = useTheme();
   const navigation = useNavigation<NavigationProp>();
+  const { canScan, remainingScans, profile } = useUserProfile();
   const [modalVisible, setModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [recentScans, setRecentScans] = useState<ScanHistory[]>([]);
   const [loadingRecent, setLoadingRecent] = useState(true);
 
-  useEffect(() => {
-    loadRecentScans();
-  }, []);
+  // Reload recent scans when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      loadRecentScans();
+    }, [])
+  );
 
   const loadRecentScans = async () => {
     try {
       setLoadingRecent(true);
+      console.log('Loading recent scans...');
       const scans = await historyService.getScanHistory();
+      console.log(`Loaded ${scans.length} scans, showing first 3 in ScanOptionsScreen`);
       setRecentScans(scans.slice(0, 3)); // Show only 3 most recent scans
     } catch (error) {
       console.error('Error loading recent scans:', error);
@@ -93,6 +100,13 @@ export const ScanOptionsScreen: React.FC = () => {
 
   const handleTakePhoto = async () => {
     setModalVisible(false);
+    
+    // Check scan limit before proceeding
+    if (!canScan) {
+      navigation.navigate('Paywall', { context: 'scanLimit' });
+      return;
+    }
+
     const hasPermission = await requestCameraPermission();
     if (!hasPermission) return;
 
@@ -120,6 +134,13 @@ export const ScanOptionsScreen: React.FC = () => {
 
   const handleSelectFromGallery = async () => {
     setModalVisible(false);
+    
+    // Check scan limit before proceeding
+    if (!canScan) {
+      navigation.navigate('Paywall', { context: 'scanLimit' });
+      return;
+    }
+
     const hasPermission = await requestGalleryPermission();
     if (!hasPermission) return;
 
@@ -157,7 +178,7 @@ export const ScanOptionsScreen: React.FC = () => {
       activeOpacity={0.7}
     >
       <GlassCard style={styles.optionCard} intensity={70}>
-        <View style={[styles.iconContainer, { backgroundColor: colors.background }]}>
+        <View style={[styles.iconContainer, { backgroundColor: colors.container }]}>
           {icon}
         </View>
         <Text style={[styles.optionTitle, { color: colors.primaryText }]}>{title}</Text>
@@ -169,7 +190,7 @@ export const ScanOptionsScreen: React.FC = () => {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.container }]}>
       <PageTransition type="fade" duration={300}>
         <ScrollView
           style={styles.scrollView}
@@ -191,10 +212,27 @@ export const ScanOptionsScreen: React.FC = () => {
             </View>
           </GlassCard>
 
+          {/* Scan Limit Info */}
+          {!profile?.isPremium && (
+            <GlassCard style={styles.limitCard} intensity={50}>
+              <Text style={[styles.limitText, { color: colors.secondaryText }]}>
+                {remainingScans > 0 
+                  ? `${remainingScans} free scan${remainingScans === 1 ? '' : 's'} remaining`
+                  : 'No free scans remaining'}
+              </Text>
+            </GlassCard>
+          )}
+
           {/* Scan Button */}
           <Button
-            title="Start Scanning"
-            onPress={() => setModalVisible(true)}
+            title={canScan ? "Start Scanning" : "Upgrade to Scan"}
+            onPress={() => {
+              if (canScan) {
+                setModalVisible(true);
+              } else {
+                navigation.navigate('Paywall', { context: 'scanLimit' });
+              }
+            }}
             icon={<Camera size={20} color={Colors.white} />}
             fullWidth
             style={styles.scanButton}
@@ -245,24 +283,22 @@ export const ScanOptionsScreen: React.FC = () => {
               />
             ) : (
               <View style={styles.recentList}>
-                {recentScans.map((scan) => {
+                {recentScans.map((scan, index) => {
                   const scanDate = scan.scanDate?.toDate ? scan.scanDate.toDate() : new Date();
                   const compliant = scan.items.filter(i => i.classification === 'compliant').length;
                   const modifiable = scan.items.filter(i => i.classification === 'modifiable').length;
                   const nonCompliant = scan.items.filter(i => i.classification === 'non_compliant').length;
 
                   return (
-                    <RevealAnimation direction="bottom" delay={index * 100}>
+                    <RevealAnimation key={scan.id} direction="bottom" delay={index * 100}>
                       <Card 
                       key={scan.id} 
                       style={styles.recentCard}
                       variant="elevated"
                       pressable
                       onPress={() => {
-                        Alert.alert(
-                          'Scan Details',
-                          `${scan.items.length} items analyzed\n${compliant} compliant, ${modifiable} modifiable, ${nonCompliant} non-compliant`
-                        );
+                        // Navigate to analysis result screen
+                        navigation.navigate('AnalysisResult', { scanId: scan.id });
                       }}
                     >
                       <View style={styles.recentCardContent}>
@@ -310,10 +346,14 @@ export const ScanOptionsScreen: React.FC = () => {
         <GlassModal visible={modalVisible}>
           <GlassCard style={styles.modalContent} intensity={90}>
             <View style={styles.modalHeader}>
+              <View style={styles.modalHeaderSpacer} />
               <Text style={[styles.modalTitle, { color: colors.primaryText }]}>
                 Choose Image Source
               </Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
+              <TouchableOpacity 
+                style={styles.modalHeaderSpacer}
+                onPress={() => setModalVisible(false)}
+              >
                 <X size={24} color={colors.secondaryText} />
               </TouchableOpacity>
             </View>
@@ -393,6 +433,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: Spacing.lg,
   },
+  limitCard: {
+    marginBottom: Spacing.md,
+    padding: Spacing.md,
+    alignItems: 'center',
+  },
+  limitText: {
+    ...Typography.bodySmall,
+    textAlign: 'center',
+  },
   scanButton: {
     marginBottom: Spacing.xl,
   },
@@ -457,18 +506,26 @@ const styles = StyleSheet.create({
   },
   modalHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     alignItems: 'center',
     marginBottom: Spacing.lg,
   },
+  modalHeaderSpacer: {
+    width: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   modalTitle: {
     ...Typography.h4,
+    textAlign: 'center',
+    flex: 1,
   },
   optionsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: Spacing.lg,
     gap: Spacing.md,
+    alignItems: 'stretch',
   },
   optionCardWrapper: {
     flex: 1,
@@ -476,6 +533,8 @@ const styles = StyleSheet.create({
   optionCard: {
     padding: Spacing.md,
     alignItems: 'center',
+    minHeight: 195,
+    justifyContent: 'center',
   },
   iconContainer: {
     width: 64,

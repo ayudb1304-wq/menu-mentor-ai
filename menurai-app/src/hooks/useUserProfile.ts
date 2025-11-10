@@ -9,6 +9,8 @@ interface UseUserProfileReturn {
   canEditDietaryPresets: boolean;
   daysRemainingForEdit: number;
   isFreeEdit: boolean;
+  canScan: boolean;
+  remainingScans: number;
   updateDietaryPreferences: (
     dietaryPresets: string[],
     customRestrictions: string[]
@@ -24,6 +26,10 @@ export const useUserProfile = (): UseUserProfileReturn => {
 
   // Calculate edit permissions
   const { canEdit, daysRemaining, isFreeEdit } = userService.canEditDietaryPresets(profile);
+  
+  // Calculate scan permissions
+  const canScan = userService.canScan(profile);
+  const remainingScans = userService.getRemainingScans(profile);
 
   useEffect(() => {
     if (!user) {
@@ -94,6 +100,8 @@ export const useUserProfile = (): UseUserProfileReturn => {
     canEditDietaryPresets: canEdit,
     daysRemainingForEdit: daysRemaining,
     isFreeEdit,
+    canScan,
+    remainingScans,
     updateDietaryPreferences,
     refreshProfile,
   };

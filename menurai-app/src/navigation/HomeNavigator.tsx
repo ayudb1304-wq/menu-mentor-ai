@@ -3,8 +3,10 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { ScanOptionsScreen } from '../screens/ScanOptionsScreen';
 import { AnalysisScreen } from '../screens/AnalysisScreen';
+import { AnalysisResultScreen } from '../screens/AnalysisResultScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { HistoryScreen } from '../screens/HistoryScreen';
+import { PaywallScreen } from '../screens/PaywallScreen';
 import { AnimatedTabBar } from '../components/AnimatedTabBar';
 import { AppHeader } from '../components';
 import { useTheme } from '../theme/ThemeContext';
@@ -48,6 +50,21 @@ const ScanNavigator: React.FC = () => {
           header: () => <AppHeader title="Menu Analysis" showBackButton />,
         }}
       />
+      <ScanStack.Screen
+        name="AnalysisResult"
+        component={AnalysisResultScreen}
+        options={{
+          header: () => <AppHeader title="Scan Details" showBackButton />,
+        }}
+      />
+      <ScanStack.Screen
+        name="Paywall"
+        component={PaywallScreen}
+        options={{
+          headerShown: false,
+          presentation: 'modal',
+        }}
+      />
     </ScanStack.Navigator>
   );
 };
@@ -88,8 +105,7 @@ export const HomeNavigator: React.FC = () => {
         name="Profile"
         component={ProfileScreen}
         options={{
-          title: 'Profile',
-          headerShown: false,
+          header: () => <AppHeader />,
         }}
       />
     </Tab.Navigator>

@@ -6,7 +6,8 @@
 export const Colors = {
   // App Colors - Light theme only with off-white background
   light: {
-    background: '#F8F9FA',  // Off-white background
+    background: '#F9F5EC',  // Off-white background
+    container: '#FFFAF1',  // Container background color
     primaryText: '#212529',
     secondaryText: '#6C757D',
     border: '#E0E0E0',
@@ -19,7 +20,8 @@ export const Colors = {
 
   // Keep dark colors for compatibility but app will only use light mode
   dark: {
-    background: '#F8F9FA',  // Same as light for now
+    background: '#F9F5EC',  // Same as light for now
+    container: '#FFFAF1',  // Container background color
     raisedGray: '#FFFFFF',
     card: '#FFFFFF',
     primaryText: '#212529',
@@ -60,14 +62,14 @@ export const Colors = {
       active: '#007BFF',
       inactive: '#6C757D',
       underline: '#007BFF',
-      background: '#F8F9FA',  // Off-white to match app background
+      background: '#F9F5EC',  // Off-white to match app background
       border: '#E0E0E0',
     },
     dark: {
       active: '#007BFF',
       inactive: '#6C757D',
       underline: '#007BFF',
-      background: '#F8F9FA',  // Same as light
+      background: '#F9F5EC',  // Same as light
       border: '#E0E0E0',
     },
   },

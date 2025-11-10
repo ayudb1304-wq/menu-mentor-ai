@@ -13,6 +13,9 @@ service firebase.storage {
                     && request.resource.size < 5 * 1024 * 1024 // 5MB limit
                     && request.resource.contentType.matches('image/.*');
       
+      // Allow users to read their own uploaded images
+      allow read: if request.auth != null && request.auth.uid == userId;
+      
       // Allow our backend function to read this file
       // This rule isn't strictly necessary if you use the Admin SDK,
       // but it's good practice. The backend function bypasses these

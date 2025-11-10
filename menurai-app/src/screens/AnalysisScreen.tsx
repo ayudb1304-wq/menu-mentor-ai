@@ -136,18 +136,18 @@ const MenuItemCard: React.FC<{ item: MenuItem }> = ({ item }) => {
         >
           <View style={styles.itemHeader}>
             <IconComponent />
-        <Text style={[styles.itemName, { color: colors.primaryText }]}>
-          {item.name}
-        </Text>
-      </View>
-      <Text style={[styles.classificationText, { color: getClassificationColor() }]}>
-        {getClassificationText()}
-      </Text>
-      {item.reason && (
-        <Text style={[styles.reasonText, { color: colors.secondaryText }]}>
-          {item.reason}
-        </Text>
-      )}
+            <Text style={[styles.itemName, { color: colors.primaryText }]}>
+              {item.name}
+            </Text>
+          </View>
+          <Text style={[styles.classificationText, { color: getClassificationColor() }]}>
+            {getClassificationText()}
+          </Text>
+          {item.reason && (
+            <Text style={[styles.reasonText, { color: colors.secondaryText }]}>
+              {item.reason}
+            </Text>
+          )}
     </Card>
   );
 };
@@ -218,7 +218,7 @@ export const AnalysisScreen: React.FC = () => {
   if (isAnalyzing) {
     return (
       <PageTransition type="zoomIn" duration={400}>
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.container }]}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <View style={styles.imageContainer}>
             <Image source={{ uri: imageUri }} style={styles.resultImage} resizeMode="cover" />
@@ -248,7 +248,7 @@ export const AnalysisScreen: React.FC = () => {
 
   return (
     <PageTransition type="slideUp" duration={400}>
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.container }]}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Image Preview */}
         <View style={styles.imageContainer}>

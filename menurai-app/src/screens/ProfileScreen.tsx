@@ -9,11 +9,11 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
-import { Utensils, Edit2, Lock, Info, Star, Bell, HelpCircle, ChevronRight, User } from '../components/icons';
+import { Utensils, Edit2, Lock, Info, HelpCircle, ChevronRight, User, Plus } from '../components/icons';
 import { useTheme } from '../theme/ThemeContext';
 import { Colors } from '../theme/colors';
 import { Typography, Spacing, BorderRadius, Shadows } from '../theme/styles';
-import { Button, Card, Chip, DottedBorder } from '../components';
+import { Button, Card, Chip } from '../components';
 import { useAuth } from '../hooks/useAuth';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { useNavigation } from '@react-navigation/native';
@@ -27,6 +27,22 @@ export const ProfileScreen: React.FC = () => {
 
   const handleEditProfile = () => {
     navigation.navigate('ProfileSetup', { isEditMode: true });
+  };
+
+  const handleAddProfile = () => {
+    if (!profile?.isPremium) {
+      // Freemium user - navigate to paywall with context
+      // Navigate to Scan tab, then to Paywall screen with context
+      navigation.navigate('Scan', { screen: 'Paywall', params: { context: 'addProfile' } });
+    } else {
+      // Premium user - check if they can add more profiles (max 4)
+      // For now, show an alert. Later this can navigate to profile creation
+      Alert.alert(
+        'Add Profile',
+        'Profile creation feature coming soon. Premium users can add up to 4 profiles.',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   const handleSignOut = async () => {
@@ -44,16 +60,11 @@ export const ProfileScreen: React.FC = () => {
   const appVersion = Constants.expoConfig?.version || '1.0.0';
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.container }]}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.primaryText }]}>Profile</Text>
-        </View>
-
         {/* User Info Card */}
         <Card style={styles.userCard}>
           <View style={styles.userInfo}>
@@ -72,6 +83,12 @@ export const ProfileScreen: React.FC = () => {
                 {user?.email}
               </Text>
             </View>
+            <TouchableOpacity 
+              onPress={handleAddProfile}
+              style={[styles.addProfileButton, { backgroundColor: Colors.brand.blue + '20' }]}
+            >
+              <Plus size={20} color={Colors.brand.blue} />
+            </TouchableOpacity>
           </View>
         </Card>
 
@@ -90,9 +107,9 @@ export const ProfileScreen: React.FC = () => {
           </View>
 
           {!canEditDietaryPresets && !isFreeEdit && (
-            <View style={[styles.lockNotice, { backgroundColor: Colors.semantic.warning + '20' }]}>
-              <Lock size={16} color={Colors.semantic.warning} />
-              <Text style={[styles.lockText, { color: Colors.semantic.warning }]}>
+            <View style={[styles.lockNotice, { backgroundColor: Colors.light.warning + '20' }]}>
+              <Lock size={16} color={Colors.light.warning} />
+              <Text style={[styles.lockText, { color: Colors.light.warning }]}>
                 Dietary preferences locked for {daysRemainingForEdit} days
               </Text>
             </View>
@@ -140,36 +157,8 @@ export const ProfileScreen: React.FC = () => {
           )}
         </Card>
 
-        {/* Premium Feature Placeholder */}
-        <DottedBorder style={styles.section} borderColor={Colors.brand.blue}>
-          <View style={styles.premiumCard}>
-            <Star size={24} color={Colors.brand.blue} />
-            <Text style={[styles.premiumTitle, { color: colors.primaryText }]}>
-              Multiple Profiles
-            </Text>
-            <Text style={[styles.premiumText, { color: colors.secondaryText }]}>
-              Create profiles for family members and switch between them easily
-            </Text>
-            <Text style={[styles.comingSoon, { color: Colors.brand.blue }]}>
-              Coming Soon
-            </Text>
-          </View>
-        </DottedBorder>
-
         {/* Settings Section */}
         <Card style={styles.section}>
-          <TouchableOpacity style={styles.settingRow}>
-            <View style={styles.settingLeft}>
-              <Bell size={24} color={colors.secondaryText} />
-              <Text style={[styles.settingText, { color: colors.primaryText }]}>
-                Notifications
-              </Text>
-            </View>
-            <ChevronRight size={20} color={colors.secondaryText} />
-          </TouchableOpacity>
-
-          <View style={styles.separator} />
-
           <TouchableOpacity style={styles.settingRow}>
             <View style={styles.settingLeft}>
               <HelpCircle size={24} color={colors.secondaryText} />
@@ -222,12 +211,6 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     paddingBottom: Spacing.xxl,
   },
-  header: {
-    marginBottom: Spacing.lg,
-  },
-  title: {
-    ...Typography.h2,
-  },
   userCard: {
     marginBottom: Spacing.lg,
   },
@@ -250,6 +233,14 @@ const styles = StyleSheet.create({
   userDetails: {
     marginLeft: Spacing.md,
     flex: 1,
+  },
+  addProfileButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: Spacing.md,
   },
   userName: {
     ...Typography.h5,
@@ -300,24 +291,6 @@ const styles = StyleSheet.create({
   emptyText: {
     ...Typography.body,
     fontStyle: 'italic',
-  },
-  premiumCard: {
-    padding: Spacing.lg,
-    alignItems: 'center',
-  },
-  premiumTitle: {
-    ...Typography.h5,
-    marginTop: Spacing.sm,
-    marginBottom: Spacing.xs,
-  },
-  premiumText: {
-    ...Typography.bodySmall,
-    textAlign: 'center',
-    marginBottom: Spacing.sm,
-  },
-  comingSoon: {
-    ...Typography.buttonSmall,
-    fontWeight: '700' as '700',
   },
   settingRow: {
     flexDirection: 'row',
