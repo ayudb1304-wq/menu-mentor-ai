@@ -10,7 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import { Info, Lock, AlertCircle } from '../components/icons';
 import { useTheme } from '../theme/ThemeContext';
 import { Colors } from '../theme/colors';
 import { Typography, Spacing, BorderRadius } from '../theme/styles';
@@ -157,7 +157,7 @@ export const ProfileSetupScreen: React.FC = () => {
             </Text>
             {isEditMode && isFreeEdit && (
               <View style={[styles.freeEditNotice, { backgroundColor: Colors.brand.blue + '20' }]}>
-                <MaterialIcons name="info" size={16} color={Colors.brand.blue} />
+                <Info size={16} color={Colors.brand.blue} />
                 <Text style={[styles.freeEditText, { color: Colors.brand.blue }]}>
                   You're using your one-time free edit. After this, changes will be locked for 30 days.
                 </Text>
@@ -200,27 +200,30 @@ export const ProfileSetupScreen: React.FC = () => {
             </Text>
 
             <View style={styles.inputContainer}>
-              <TextInput
-                style={[
-                  styles.input,
-                  {
-                    color: colors.primaryText,
-                    backgroundColor: colors.background,
-                    borderColor: colors.border,
-                  },
-                ]}
-                placeholder="e.g., shellfish, tree nuts, soy..."
-                placeholderTextColor={colors.secondaryText}
-                value={customRestriction}
-                onChangeText={setCustomRestriction}
-                onSubmitEditing={addCustomRestriction}
-                returnKeyType="done"
-              />
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  style={[
+                    styles.input,
+                    {
+                      color: colors.primaryText,
+                      backgroundColor: colors.background,
+                      borderColor: colors.border,
+                    },
+                  ]}
+                  placeholder="e.g., shellfish, tree nuts, soy..."
+                  placeholderTextColor={colors.secondaryText}
+                  value={customRestriction}
+                  onChangeText={setCustomRestriction}
+                  onSubmitEditing={addCustomRestriction}
+                  returnKeyType="done"
+                />
+              </View>
               <Button
                 title="Add"
                 size="small"
                 onPress={addCustomRestriction}
                 disabled={!customRestriction.trim()}
+                style={styles.addButton}
               />
             </View>
 
@@ -319,15 +322,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: Spacing.md,
+    gap: Spacing.sm,
+  },
+  inputWrapper: {
+    flex: 1,
   },
   input: {
-    flex: 1,
     borderWidth: 1,
     borderRadius: BorderRadius.md,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
-    marginRight: Spacing.sm,
     ...Typography.body,
+    minHeight: 44,
+  },
+  addButton: {
+    minWidth: 80,
   },
   restrictionsContainer: {
     flexDirection: 'row',
