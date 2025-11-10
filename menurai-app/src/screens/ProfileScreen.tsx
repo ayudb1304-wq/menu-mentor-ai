@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
-import { MaterialIcons, Feather } from '@expo/vector-icons';
+import { User, Edit2, UtensilsCrossed, Lock, Info, Star, Bell, HelpCircle, Shield, ChevronRight } from '../components/icons';
 import { useTheme } from '../theme/ThemeContext';
 import { Colors } from '../theme/colors';
 import { Typography, Spacing, BorderRadius, Shadows } from '../theme/styles';
@@ -61,7 +61,7 @@ export const ProfileScreen: React.FC = () => {
               <Image source={{ uri: user.photoURL }} style={styles.avatar} />
             ) : (
               <View style={[styles.avatarPlaceholder, { backgroundColor: colors.border }]}>
-                <Feather name="user" size={32} color={colors.secondaryText} />
+                <User size={32} color={colors.secondaryText} />
               </View>
             )}
             <View style={styles.userDetails}>
@@ -79,19 +79,19 @@ export const ProfileScreen: React.FC = () => {
         <Card style={styles.section}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionTitleRow}>
-              <MaterialIcons name="restaurant-menu" size={24} color={Colors.brand.green} />
+              <UtensilsCrossed size={24} color={Colors.brand.green} />
               <Text style={[styles.sectionTitle, { color: colors.primaryText }]}>
                 Dietary Profile
               </Text>
             </View>
             <TouchableOpacity onPress={handleEditProfile}>
-              <Feather name="edit-2" size={20} color={Colors.brand.blue} />
+              <Edit2 size={20} color={Colors.brand.blue} />
             </TouchableOpacity>
           </View>
 
           {!canEditDietaryPresets && !isFreeEdit && (
             <View style={[styles.lockNotice, { backgroundColor: Colors.semantic.warning + '20' }]}>
-              <MaterialIcons name="lock-clock" size={16} color={Colors.semantic.warning} />
+              <Lock size={16} color={Colors.semantic.warning} />
               <Text style={[styles.lockText, { color: Colors.semantic.warning }]}>
                 Dietary preferences locked for {daysRemainingForEdit} days
               </Text>
@@ -100,7 +100,7 @@ export const ProfileScreen: React.FC = () => {
 
           {isFreeEdit && (
             <View style={[styles.lockNotice, { backgroundColor: Colors.brand.blue + '20' }]}>
-              <MaterialIcons name="info" size={16} color={Colors.brand.blue} />
+              <Info size={16} color={Colors.brand.blue} />
               <Text style={[styles.lockText, { color: Colors.brand.blue }]}>
                 You have one free edit available
               </Text>
@@ -143,7 +143,7 @@ export const ProfileScreen: React.FC = () => {
         {/* Premium Feature Placeholder */}
         <DottedBorder style={styles.section} borderColor={Colors.brand.blue}>
           <View style={styles.premiumCard}>
-            <MaterialIcons name="star" size={24} color={Colors.brand.blue} />
+            <Star size={24} color={Colors.brand.blue} />
             <Text style={[styles.premiumTitle, { color: colors.primaryText }]}>
               Multiple Profiles
             </Text>
@@ -160,36 +160,36 @@ export const ProfileScreen: React.FC = () => {
         <Card style={styles.section}>
           <TouchableOpacity style={styles.settingRow}>
             <View style={styles.settingLeft}>
-              <MaterialIcons name="notifications" size={24} color={colors.secondaryText} />
+              <Bell size={24} color={colors.secondaryText} />
               <Text style={[styles.settingText, { color: colors.primaryText }]}>
                 Notifications
               </Text>
             </View>
-            <Feather name="chevron-right" size={20} color={colors.secondaryText} />
+            <ChevronRight size={20} color={colors.secondaryText} />
           </TouchableOpacity>
 
           <View style={styles.separator} />
 
           <TouchableOpacity style={styles.settingRow}>
             <View style={styles.settingLeft}>
-              <MaterialIcons name="help-outline" size={24} color={colors.secondaryText} />
+              <HelpCircle size={24} color={colors.secondaryText} />
               <Text style={[styles.settingText, { color: colors.primaryText }]}>
                 Help & Support
               </Text>
             </View>
-            <Feather name="chevron-right" size={20} color={colors.secondaryText} />
+            <ChevronRight size={20} color={colors.secondaryText} />
           </TouchableOpacity>
 
           <View style={styles.separator} />
 
           <TouchableOpacity style={styles.settingRow}>
             <View style={styles.settingLeft}>
-              <MaterialIcons name="privacy-tip" size={24} color={colors.secondaryText} />
+              <Shield size={24} color={colors.secondaryText} />
               <Text style={[styles.settingText, { color: colors.primaryText }]}>
                 Privacy Policy
               </Text>
             </View>
-            <Feather name="chevron-right" size={20} color={colors.secondaryText} />
+            <ChevronRight size={20} color={colors.secondaryText} />
           </TouchableOpacity>
         </Card>
 
