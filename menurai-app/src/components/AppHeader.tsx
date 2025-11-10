@@ -9,7 +9,7 @@ import {
   Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, Menu, Bell } from './icons';
+import { WebIcon } from './WebIcon';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
 import { Typography, Spacing, Shadows } from '../theme/styles';
@@ -63,7 +63,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               style={styles.iconButton}
               activeOpacity={0.7}
             >
-              <ArrowLeft size={24} color={colors.primaryText} strokeWidth={2} />
+              <WebIcon name="chevron-left" size={24} color={colors.primaryText} />
             </TouchableOpacity>
           ) : showMenuButton ? (
             <TouchableOpacity
@@ -71,7 +71,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               style={styles.iconButton}
               activeOpacity={0.7}
             >
-              <Menu size={24} color={colors.primaryText} strokeWidth={2} />
+              <WebIcon name="menu" size={24} color={colors.primaryText} />
             </TouchableOpacity>
           ) : (
             <View style={styles.logoContainer}>
@@ -109,7 +109,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               style={styles.iconButton}
               activeOpacity={0.7}
             >
-              <Bell size={22} color={colors.primaryText} strokeWidth={2} />
+              <WebIcon name="notifications" size={22} color={colors.primaryText} />
             </TouchableOpacity>
           ) : (
             <View style={styles.placeholder} />

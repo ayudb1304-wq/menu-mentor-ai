@@ -39,6 +39,7 @@ const IconSVGs: { [key: string]: string } = {
   'image': '🖼',
   'x': '✕',
   'check': '✓',
+  'menu': '☰',
 };
 
 export const WebIcon: React.FC<WebIconProps> = ({ name, size = 24, color = '#000', style }) => {

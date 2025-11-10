@@ -8,7 +8,7 @@ import {
   LayoutChangeEvent,
   Platform,
 } from 'react-native';
-import { Camera, History, User } from './icons';
+import { WebIcon } from './WebIcon';
 import { useTheme } from '../theme/ThemeContext';
 import { Colors } from '../theme/colors';
 import { TabBarStyles, Spacing, Shadows } from '../theme/styles';
@@ -70,11 +70,11 @@ export const AnimatedTabBar: React.FC<BottomTabBarProps> = ({
 
     switch (route.name) {
       case 'Scan':
-        return <Camera size={iconSize} color={iconColor} strokeWidth={2} />;
+        return <WebIcon name="camera" size={iconSize} color={iconColor} />;
       case 'History':
-        return <History size={iconSize} color={iconColor} strokeWidth={2} />;
+        return <WebIcon name="history" size={iconSize} color={iconColor} />;
       case 'Profile':
-        return <User size={iconSize} color={iconColor} strokeWidth={2} />;
+        return <WebIcon name="user" size={iconSize} color={iconColor} />;
       default:
         return null;
     }

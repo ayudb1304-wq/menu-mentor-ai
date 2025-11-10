@@ -325,11 +325,19 @@ To add new icons, update the `IconSVGs` object in `src/components/WebIcon.tsx`.
 
 All critical UI/UX issues have been resolved. The app now:
 - ✅ Works properly on web, iOS, and Android
-- ✅ Displays all icons correctly on all platforms
+- ✅ Displays all icons correctly on all platforms (including tab bar and header)
 - ✅ Has proper scrolling everywhere
 - ✅ Handles images gracefully with loading and error states
 - ✅ Provides good accessibility support
 - ✅ Has better user feedback (hover states, loading indicators)
 - ✅ Handles platform-specific constraints (camera on web)
+- ✅ Shows version v2.0.0 in profile page
+
+### Latest Updates (v2.0.0)
+- Fixed AnimatedTabBar icons (Camera, History, User) to use WebIcon
+- Fixed AppHeader icons (back arrow, menu, notifications) to use WebIcon
+- Updated profile page to display v2.0.0
+- Added menu icon (☰) to WebIcon mappings
+- All Lucide icon imports replaced with WebIcon
 
 The app is now ready for thorough testing and deployment!

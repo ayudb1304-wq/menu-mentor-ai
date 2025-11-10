@@ -40,7 +40,7 @@ export const ProfileScreen: React.FC = () => {
     }
   };
 
-  const appVersion = Constants.expoConfig?.version || '1.0.0';
+  const appVersion = 'v2.0.0';
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
