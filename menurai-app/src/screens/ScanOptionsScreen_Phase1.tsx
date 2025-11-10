@@ -18,15 +18,7 @@ import { format } from 'date-fns';
 import { useTheme } from '../theme/ThemeContext';
 import { Colors } from '../theme/colors';
 import { Typography, Spacing, BorderRadius, Shadows } from '../theme/styles';
-import { 
-  Button, 
-  Card, 
-  SkeletonHistoryItem,
-  GlassCard,
-  PageTransition,
-  PulseLoader,
-  GlassModal,
-} from '../components';
+import { Button, Card, LoadingOverlay, SkeletonHistoryItem } from '../components';
 import { ScanStackParamList } from '../navigation/types';
 import historyService, { ScanHistory } from '../services/historyService';
 
@@ -37,16 +29,16 @@ export const ScanOptionsScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const [modalVisible, setModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingRecent, setLoadingRecent] = useState(false);
   const [recentScans, setRecentScans] = useState<ScanHistory[]>([]);
+  const [loadingRecent, setLoadingRecent] = useState(true);
 
   useEffect(() => {
     loadRecentScans();
   }, []);
 
   const loadRecentScans = async () => {
-    setLoadingRecent(true);
     try {
+      setLoadingRecent(true);
       const scans = await historyService.getScanHistory();
       setRecentScans(scans.slice(0, 3)); // Show only 3 most recent scans
     } catch (error) {
@@ -149,161 +141,155 @@ export const ScanOptionsScreen: React.FC = () => {
     onPress: () => void;
   }> = ({ icon, title, description, onPress }) => (
     <TouchableOpacity
-      style={styles.optionCardWrapper}
+      style={[styles.optionCard, { backgroundColor: colors.card }]}
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <GlassCard style={styles.optionCard} intensity={70}>
-        <View style={[styles.iconContainer, { backgroundColor: colors.background }]}>
-          {icon}
-        </View>
-        <Text style={[styles.optionTitle, { color: colors.primaryText }]}>{title}</Text>
-        <Text style={[styles.optionDescription, { color: colors.secondaryText }]}>
-          {description}
-        </Text>
-      </GlassCard>
+      <View style={[styles.iconContainer, { backgroundColor: colors.background }]}>
+        {icon}
+      </View>
+      <Text style={[styles.optionTitle, { color: colors.primaryText }]}>{title}</Text>
+      <Text style={[styles.optionDescription, { color: colors.secondaryText }]}>
+        {description}
+      </Text>
     </TouchableOpacity>
   );
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <PageTransition type="fade" duration={300}>
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Header Section with Glass Effect */}
-          <GlassCard style={styles.headerGlass} intensity={60}>
-            <View style={styles.header}>
-              <View style={[styles.headerIcon, { backgroundColor: Colors.brand.blue + '20' }]}>
-                <MaterialIcons name="restaurant-menu" size={48} color={Colors.brand.blue} />
-              </View>
-              <Text style={[styles.title, { color: colors.primaryText }]}>
-                Scan a Menu
-              </Text>
-              <Text style={[styles.subtitle, { color: colors.secondaryText }]}>
-                Take a photo or select from your gallery to analyze menu items based on your dietary preferences
-              </Text>
-            </View>
-          </GlassCard>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header Section */}
+        <View style={styles.header}>
+          <View style={[styles.headerIcon, { backgroundColor: Colors.brand.blue + '20' }]}>
+            <MaterialIcons name="restaurant-menu" size={48} color={Colors.brand.blue} />
+          </View>
+          <Text style={[styles.title, { color: colors.primaryText }]}>
+            Scan a Menu
+          </Text>
+          <Text style={[styles.subtitle, { color: colors.secondaryText }]}>
+            Take a photo or select from your gallery to analyze menu items based on your dietary preferences
+          </Text>
+        </View>
 
-          {/* Scan Button */}
-          <Button
-            title="Start Scanning"
-            onPress={() => setModalVisible(true)}
-            icon={<Feather name="camera" size={20} color={Colors.white} />}
-            fullWidth
-            style={styles.scanButton}
-          />
+        {/* Scan Button */}
+        <Button
+          title="Start Scanning"
+          onPress={() => setModalVisible(true)}
+          icon={<Feather name="camera" size={20} color={Colors.white} />}
+          fullWidth
+          style={styles.scanButton}
+        />
 
-          {/* Tips Section with Glass Effect */}
-          <GlassCard style={styles.tipsCard} intensity={50}>
-            <Text style={[styles.tipsTitle, { color: colors.primaryText }]}>
-              Tips for Best Results
+        {/* Tips Section */}
+        <Card style={styles.tipsCard}>
+          <Text style={[styles.tipsTitle, { color: colors.primaryText }]}>
+            Tips for Best Results
+          </Text>
+          <View style={styles.tipRow}>
+            <Feather name="check-circle" size={16} color={Colors.brand.green} />
+            <Text style={[styles.tipText, { color: colors.secondaryText }]}>
+              Ensure good lighting for clear text
             </Text>
-            <View style={styles.tipRow}>
-              <Feather name="check-circle" size={16} color={Colors.brand.green} />
-              <Text style={[styles.tipText, { color: colors.secondaryText }]}>
-                Ensure good lighting for clear text
-              </Text>
-            </View>
-            <View style={styles.tipRow}>
-              <Feather name="check-circle" size={16} color={Colors.brand.green} />
-              <Text style={[styles.tipText, { color: colors.secondaryText }]}>
-                Capture the entire menu section
-              </Text>
-            </View>
-            <View style={styles.tipRow}>
-              <Feather name="check-circle" size={16} color={Colors.brand.green} />
-              <Text style={[styles.tipText, { color: colors.secondaryText }]}>
-                Avoid blurry or angled photos
-              </Text>
-            </View>
-          </GlassCard>
-
-          {/* Recent Scans */}
-          <View style={styles.recentSection}>
-            <Text style={[styles.recentTitle, { color: colors.primaryText }]}>
-              Recent Scans
+          </View>
+          <View style={styles.tipRow}>
+            <Feather name="check-circle" size={16} color={Colors.brand.green} />
+            <Text style={[styles.tipText, { color: colors.secondaryText }]}>
+              Capture the entire menu section
             </Text>
-            {loadingRecent ? (
-              <View>
-                <SkeletonHistoryItem />
-                <SkeletonHistoryItem />
-                <SkeletonHistoryItem />
-              </View>
-            ) : recentScans.length === 0 ? (
-              <View style={[styles.emptyState, { borderColor: colors.border }]}>
-                <MaterialIcons name="history" size={32} color={colors.secondaryText} />
-                <Text style={[styles.emptyText, { color: colors.secondaryText }]}>
-                  No recent scans yet
-                </Text>
-              </View>
-            ) : (
-              <View style={styles.recentList}>
-                {recentScans.map((scan) => {
-                  const scanDate = scan.scanDate?.toDate ? scan.scanDate.toDate() : new Date();
-                  const compliant = scan.items.filter(i => i.classification === 'compliant').length;
-                  const modifiable = scan.items.filter(i => i.classification === 'modifiable').length;
-                  const nonCompliant = scan.items.filter(i => i.classification === 'non_compliant').length;
+          </View>
+          <View style={styles.tipRow}>
+            <Feather name="check-circle" size={16} color={Colors.brand.green} />
+            <Text style={[styles.tipText, { color: colors.secondaryText }]}>
+              Avoid blurry or angled photos
+            </Text>
+          </View>
+        </Card>
 
-                  return (
-                    <Card 
-                      key={scan.id} 
-                      style={styles.recentCard}
-                      variant="elevated"
-                      pressable
-                      onPress={() => {
-                        Alert.alert(
-                          'Scan Details',
-                          `${scan.items.length} items analyzed\n${compliant} compliant, ${modifiable} modifiable, ${nonCompliant} non-compliant`
-                        );
-                      }}
-                    >
-                      <View style={styles.recentCardContent}>
-                        <Text style={[styles.recentDate, { color: colors.secondaryText }]}>
-                          {format(scanDate, 'MMM d, yyyy • h:mm a')}
-                        </Text>
-                        <View style={styles.recentStats}>
-                          <View style={styles.statBadge}>
-                            <MaterialIcons name="check-circle" size={14} color={Colors.semantic.compliant} />
-                            <Text style={[styles.statCount, { color: Colors.semantic.compliant }]}>
-                              {compliant}
-                            </Text>
-                          </View>
-                          <View style={styles.statBadge}>
-                            <MaterialIcons name="info" size={14} color={Colors.semantic.modifiable} />
-                            <Text style={[styles.statCount, { color: Colors.semantic.modifiable }]}>
-                              {modifiable}
-                            </Text>
-                          </View>
-                          <View style={styles.statBadge}>
-                            <MaterialIcons name="cancel" size={14} color={Colors.semantic.nonCompliant} />
-                            <Text style={[styles.statCount, { color: Colors.semantic.nonCompliant }]}>
-                              {nonCompliant}
-                            </Text>
-                          </View>
+        {/* Recent Scans */}
+        <View style={styles.recentSection}>
+          <Text style={[styles.recentTitle, { color: colors.primaryText }]}>
+            Recent Scans
+          </Text>
+          {loadingRecent ? (
+            <View>
+              <SkeletonHistoryItem />
+              <SkeletonHistoryItem />
+              <SkeletonHistoryItem />
+            </View>
+          ) : recentScans.length === 0 ? (
+            <View style={[styles.emptyState, { borderColor: colors.border }]}>
+              <MaterialIcons name="history" size={32} color={colors.secondaryText} />
+              <Text style={[styles.emptyText, { color: colors.secondaryText }]}>
+                No recent scans yet
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.recentList}>
+              {recentScans.map((scan) => {
+                const scanDate = scan.scanDate?.toDate ? scan.scanDate.toDate() : new Date();
+                const compliant = scan.items.filter(i => i.classification === 'compliant').length;
+                const modifiable = scan.items.filter(i => i.classification === 'modifiable').length;
+                const nonCompliant = scan.items.filter(i => i.classification === 'non_compliant').length;
+
+                return (
+                  <Card 
+                    key={scan.id} 
+                    style={styles.recentCard}
+                    variant="elevated"
+                    pressable
+                    onPress={() => {
+                      Alert.alert(
+                        'Scan Details',
+                        `${scan.items.length} items analyzed\n${compliant} compliant, ${modifiable} modifiable, ${nonCompliant} non-compliant`
+                      );
+                    }}
+                  >
+                    <View style={styles.recentCardContent}>
+                      <Text style={[styles.recentDate, { color: colors.secondaryText }]}>
+                        {format(scanDate, 'MMM d, yyyy • h:mm a')}
+                      </Text>
+                      <View style={styles.recentStats}>
+                        <View style={styles.statBadge}>
+                          <MaterialIcons name="check-circle" size={14} color={Colors.semantic.compliant} />
+                          <Text style={[styles.statCount, { color: Colors.semantic.compliant }]}>
+                            {compliant}
+                          </Text>
+                        </View>
+                        <View style={styles.statBadge}>
+                          <MaterialIcons name="info" size={14} color={Colors.semantic.modifiable} />
+                          <Text style={[styles.statCount, { color: Colors.semantic.modifiable }]}>
+                            {modifiable}
+                          </Text>
+                        </View>
+                        <View style={styles.statBadge}>
+                          <MaterialIcons name="cancel" size={14} color={Colors.semantic.nonCompliant} />
+                          <Text style={[styles.statCount, { color: Colors.semantic.nonCompliant }]}>
+                            {nonCompliant}
+                          </Text>
                         </View>
                       </View>
-                    </Card>
-                  );
-                })}
-              </View>
-            )}
-          </View>
-        </ScrollView>
-      </PageTransition>
+                    </View>
+                  </Card>
+                );
+              })}
+            </View>
+          )}
+        </View>
+      </ScrollView>
 
-      {/* Selection Modal with Glass Effect */}
+      {/* Selection Modal */}
       <Modal
-        animationType="fade"
+        animationType="slide"
         transparent={true}
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
-        <GlassModal visible={modalVisible}>
-          <GlassCard style={styles.modalContent} intensity={90}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.primaryText }]}>
                 Choose Image Source
@@ -335,19 +321,11 @@ export const ScanOptionsScreen: React.FC = () => {
               fullWidth
               style={styles.cancelButton}
             />
-          </GlassCard>
-        </GlassModal>
+          </View>
+        </View>
       </Modal>
 
-      {/* Custom Loading with Glass Effect */}
-      {isLoading && (
-        <View style={styles.loadingOverlay}>
-          <GlassCard style={styles.loadingCard} intensity={95}>
-            <PulseLoader size={80} color={Colors.brand.blue} />
-            <Text style={[styles.loadingText, { color: colors.primaryText }]}>Processing...</Text>
-          </GlassCard>
-        </View>
-      )}
+      <LoadingOverlay visible={isLoading} message="Processing..." />
     </SafeAreaView>
   );
 };
@@ -364,12 +342,14 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     paddingBottom: Spacing.xl * 2,
   },
-  headerGlass: {
-    marginBottom: Spacing.xl,
-    marginTop: Spacing.lg,
+  content: {
+    flex: 1,
+    padding: Spacing.lg,
   },
   header: {
     alignItems: 'center',
+    marginBottom: Spacing.xl,
+    marginTop: Spacing.lg,
   },
   headerIcon: {
     width: 80,
@@ -428,27 +408,16 @@ const styles = StyleSheet.create({
     ...Typography.body,
     marginTop: Spacing.sm,
   },
-  loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  loadingCard: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: Spacing.xl,
-    minWidth: 200,
-  },
-  loadingText: {
-    ...Typography.bodyMedium,
-    marginTop: Spacing.md,
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: Colors.overlay,
+    justifyContent: 'flex-end',
   },
   modalContent: {
-    width: '90%',
-    maxWidth: 400,
-    borderRadius: BorderRadius.xl,
+    borderTopLeftRadius: BorderRadius.xl,
+    borderTopRightRadius: BorderRadius.xl,
     padding: Spacing.lg,
+    ...Shadows.lg,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -463,14 +432,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: Spacing.lg,
-    gap: Spacing.md,
-  },
-  optionCardWrapper: {
-    flex: 1,
   },
   optionCard: {
+    flex: 1,
     padding: Spacing.md,
+    borderRadius: BorderRadius.md,
     alignItems: 'center',
+    marginHorizontal: Spacing.sm,
+    ...Shadows.sm,
   },
   iconContainer: {
     width: 64,
@@ -483,7 +452,6 @@ const styles = StyleSheet.create({
   optionTitle: {
     ...Typography.bodyMedium,
     marginBottom: Spacing.xs,
-    textAlign: 'center',
   },
   optionDescription: {
     ...Typography.caption,
