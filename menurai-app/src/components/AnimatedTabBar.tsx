@@ -27,8 +27,18 @@ export const AnimatedTabBar: React.FC<BottomTabBarProps> = ({
   const { colors, isDarkMode } = useTheme();
   const underlineTranslateX = useRef(new Animated.Value(0)).current;
   const underlineWidth = useRef(new Animated.Value(0)).current;
+  const bubbleTranslateX = useRef(new Animated.Value(0)).current;
+  const bubbleScale = useRef(new Animated.Value(0)).current;
   const [tabInfo, setTabInfo] = useState<TabInfo[]>([]);
   const tabColors = Colors.tabBar.light; // Always use light mode
+  
+  // Animation refs for each tab (bounce effect)
+  const tabScaleAnims = useRef(
+    state.routes.map(() => new Animated.Value(1))
+  ).current;
+  const iconScaleAnims = useRef(
+    state.routes.map(() => new Animated.Value(1))
+  ).current;
 
   // Measure tab positions
   const handleTabLayout = (index: number) => (event: LayoutChangeEvent) => {
@@ -40,13 +50,15 @@ export const AnimatedTabBar: React.FC<BottomTabBarProps> = ({
     });
   };
 
-  // Animate underline to selected tab
+  // Animate underline and bubble to selected tab
   useEffect(() => {
     if (tabInfo.length > 0 && tabInfo[state.index]) {
       const targetTab = tabInfo[state.index];
-      const targetX = targetTab.x + (targetTab.width - targetTab.width * 0.6) / 2; // Center underline at 60% of tab width
-      const targetWidth = targetTab.width * 0.6; // 60% of tab width for aesthetic
+      const targetX = targetTab.x + (targetTab.width - targetTab.width * 0.6) / 2;
+      const targetWidth = targetTab.width * 0.6;
+      const bubbleX = targetTab.x + (targetTab.width - 56) / 2; // Center 56px bubble
 
+      // Animate underline
       Animated.parallel([
         Animated.spring(underlineTranslateX, {
           toValue: targetX,
@@ -58,31 +70,133 @@ export const AnimatedTabBar: React.FC<BottomTabBarProps> = ({
           toValue: targetWidth,
           damping: 20,
           stiffness: 150,
-          useNativeDriver: false, // width animation requires false
+          useNativeDriver: false,
+        }),
+      ]).start();
+
+      // Animate bubble background
+      Animated.parallel([
+        Animated.spring(bubbleTranslateX, {
+          toValue: bubbleX,
+          damping: 15,
+          stiffness: 120,
+          useNativeDriver: true,
+        }),
+        Animated.spring(bubbleScale, {
+          toValue: 1,
+          damping: 15,
+          stiffness: 120,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // Bounce animation for the selected tab
+      Animated.sequence([
+        Animated.spring(tabScaleAnims[state.index], {
+          toValue: 1.2,
+          friction: 3,
+          tension: 100,
+          useNativeDriver: true,
+        }),
+        Animated.spring(tabScaleAnims[state.index], {
+          toValue: 1,
+          friction: 3,
+          tension: 100,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // Icon bounce animation
+      Animated.sequence([
+        Animated.spring(iconScaleAnims[state.index], {
+          toValue: 1.3,
+          friction: 3,
+          tension: 100,
+          useNativeDriver: true,
+        }),
+        Animated.spring(iconScaleAnims[state.index], {
+          toValue: 1,
+          friction: 3,
+          tension: 100,
+          useNativeDriver: true,
         }),
       ]).start();
     }
   }, [state.index, tabInfo]);
 
-  const renderIcon = (route: any, focused: boolean) => {
+  const renderIcon = (route: any, focused: boolean, index: number) => {
     const iconColor = focused ? tabColors.active : tabColors.inactive;
     const iconSize = 24;
 
+    let IconComponent;
     switch (route.name) {
       case 'Scan':
-        return <Camera size={iconSize} color={iconColor} strokeWidth={2} />;
+        IconComponent = Camera;
+        break;
       case 'History':
-        return <History size={iconSize} color={iconColor} strokeWidth={2} />;
+        IconComponent = History;
+        break;
       case 'Profile':
-        return <User size={iconSize} color={iconColor} strokeWidth={2} />;
+        IconComponent = User;
+        break;
       default:
         return null;
+    }
+
+    return (
+      <Animated.View
+        style={{
+          transform: [{ scale: iconScaleAnims[index] }],
+        }}
+      >
+        <IconComponent size={iconSize} color={iconColor} strokeWidth={focused ? 2.5 : 2} />
+      </Animated.View>
+    );
+  };
+
+  const handleTabPress = (index: number, route: any, isFocused: boolean) => {
+    // Micro-interaction: quick press animation
+    Animated.sequence([
+      Animated.timing(tabScaleAnims[index], {
+        toValue: 0.9,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.spring(tabScaleAnims[index], {
+        toValue: 1,
+        friction: 3,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    const event = navigation.emit({
+      type: 'tabPress',
+      target: route.key,
+      canPreventDefault: true,
+    });
+
+    if (!isFocused && !event.defaultPrevented) {
+      navigation.navigate(route.name);
     }
   };
 
   return (
     <View style={[styles.container, { backgroundColor: tabColors.background }]}>
-      {/* Top Border */}
+      {/* Animated Background Bubble */}
+      <Animated.View
+        style={[
+          styles.bubble,
+          {
+            transform: [
+              { translateX: bubbleTranslateX },
+              { scale: bubbleScale },
+            ],
+            backgroundColor: tabColors.active + '15',
+          },
+        ]}
+      />
+
+      {/* Top Border with gradient effect */}
       <View style={[styles.topBorder, { backgroundColor: tabColors.border }]} />
 
       {/* Tab Items */}
@@ -98,17 +212,7 @@ export const AnimatedTabBar: React.FC<BottomTabBarProps> = ({
 
           const isFocused = state.index === index;
 
-          const onPress = () => {
-            const event = navigation.emit({
-              type: 'tabPress',
-              target: route.key,
-              canPreventDefault: true,
-            });
-
-            if (!isFocused && !event.defaultPrevented) {
-              navigation.navigate(route.name);
-            }
-          };
+          const onPress = () => handleTabPress(index, route, isFocused);
 
           const onLongPress = () => {
             navigation.emit({
@@ -123,16 +227,22 @@ export const AnimatedTabBar: React.FC<BottomTabBarProps> = ({
               accessibilityRole="button"
               accessibilityState={isFocused ? { selected: true } : {}}
               accessibilityLabel={options.tabBarAccessibilityLabel}
-              testID={options.tabBarTestID}
               onPress={onPress}
               onLongPress={onLongPress}
               onLayout={handleTabLayout(index)}
               style={styles.tab}
               activeOpacity={0.7}
             >
-              <View style={styles.tabContent}>
-                {renderIcon(route, isFocused)}
-                <Text
+              <Animated.View
+                style={[
+                  styles.tabContent,
+                  {
+                    transform: [{ scale: tabScaleAnims[index] }],
+                  },
+                ]}
+              >
+                {renderIcon(route, isFocused, index)}
+                <Animated.Text
                   style={[
                     isFocused ? TabBarStyles.tabLabelActive : TabBarStyles.tabLabel,
                     {
@@ -143,14 +253,14 @@ export const AnimatedTabBar: React.FC<BottomTabBarProps> = ({
                   numberOfLines={1}
                 >
                   {label as string}
-                </Text>
-              </View>
+                </Animated.Text>
+              </Animated.View>
             </TouchableOpacity>
           );
         })}
       </View>
 
-      {/* Animated Underline */}
+      {/* Animated Underline with glow effect */}
       <Animated.View
         style={[
           styles.underline,
@@ -158,6 +268,10 @@ export const AnimatedTabBar: React.FC<BottomTabBarProps> = ({
             transform: [{ translateX: underlineTranslateX }],
             width: underlineWidth,
             backgroundColor: tabColors.underline,
+            shadowColor: tabColors.underline,
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.5,
+            shadowRadius: 4,
           },
         ]}
       />
@@ -169,7 +283,7 @@ const styles = StyleSheet.create({
   container: {
     height: Platform.select({ ios: 80, android: 70, default: 70 }),
     position: 'relative',
-    ...Shadows.sm,
+    ...Shadows.md,
   },
   topBorder: {
     position: 'absolute',
@@ -178,11 +292,21 @@ const styles = StyleSheet.create({
     right: 0,
     height: StyleSheet.hairlineWidth,
   },
+  bubble: {
+    position: 'absolute',
+    top: 8,
+    left: 0,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    zIndex: 0,
+  },
   tabContainer: {
     flexDirection: 'row',
     flex: 1,
     alignItems: 'center',
     paddingHorizontal: Spacing.sm,
+    zIndex: 1,
   },
   tab: {
     flex: 1,
@@ -201,5 +325,6 @@ const styles = StyleSheet.create({
     height: 3,
     borderTopLeftRadius: 2,
     borderTopRightRadius: 2,
+    elevation: 4,
   },
 });

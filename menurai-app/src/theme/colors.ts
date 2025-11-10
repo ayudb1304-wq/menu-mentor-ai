@@ -33,8 +33,10 @@ export const Colors = {
 
   // Brand & Action Colors (theme-independent)
   brand: {
-    blue: '#007BFF',
-    green: '#28A745',
+    blue: '#0066FF',
+    blueLight: '#00B4D8',
+    green: '#38A169',
+    greenLight: '#68D391',
   },
 
   // Semantic Colors for menu analysis

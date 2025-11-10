@@ -18,7 +18,7 @@ import { format } from 'date-fns';
 import { useTheme } from '../theme/ThemeContext';
 import { Colors } from '../theme/colors';
 import { Typography, Spacing, BorderRadius, Shadows } from '../theme/styles';
-import { Button, Card, LoadingOverlay } from '../components';
+import { Button, Card, LoadingOverlay, SkeletonHistoryItem } from '../components';
 import { ScanStackParamList } from '../navigation/types';
 import historyService, { ScanHistory } from '../services/historyService';
 
@@ -30,6 +30,7 @@ export const ScanOptionsScreen: React.FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [recentScans, setRecentScans] = useState<ScanHistory[]>([]);
+  const [loadingRecent, setLoadingRecent] = useState(true);
 
   useEffect(() => {
     loadRecentScans();
@@ -37,10 +38,13 @@ export const ScanOptionsScreen: React.FC = () => {
 
   const loadRecentScans = async () => {
     try {
+      setLoadingRecent(true);
       const scans = await historyService.getScanHistory();
       setRecentScans(scans.slice(0, 3)); // Show only 3 most recent scans
     } catch (error) {
       console.error('Error loading recent scans:', error);
+    } finally {
+      setLoadingRecent(false);
     }
   };
 
@@ -210,7 +214,13 @@ export const ScanOptionsScreen: React.FC = () => {
           <Text style={[styles.recentTitle, { color: colors.primaryText }]}>
             Recent Scans
           </Text>
-          {recentScans.length === 0 ? (
+          {loadingRecent ? (
+            <View>
+              <SkeletonHistoryItem />
+              <SkeletonHistoryItem />
+              <SkeletonHistoryItem />
+            </View>
+          ) : recentScans.length === 0 ? (
             <View style={[styles.emptyState, { borderColor: colors.border }]}>
               <MaterialIcons name="history" size={32} color={colors.secondaryText} />
               <Text style={[styles.emptyText, { color: colors.secondaryText }]}>
@@ -226,42 +236,43 @@ export const ScanOptionsScreen: React.FC = () => {
                 const nonCompliant = scan.items.filter(i => i.classification === 'non_compliant').length;
 
                 return (
-                  <Card key={scan.id} style={styles.recentCard}>
-                    <TouchableOpacity
-                      activeOpacity={0.7}
-                      onPress={() => {
-                        Alert.alert(
-                          'Scan Details',
-                          `${scan.items.length} items analyzed\n${compliant} compliant, ${modifiable} modifiable, ${nonCompliant} non-compliant`
-                        );
-                      }}
-                    >
-                      <View style={styles.recentCardContent}>
-                        <Text style={[styles.recentDate, { color: colors.secondaryText }]}>
-                          {format(scanDate, 'MMM d, yyyy • h:mm a')}
-                        </Text>
-                        <View style={styles.recentStats}>
-                          <View style={styles.statBadge}>
-                            <MaterialIcons name="check-circle" size={14} color={Colors.semantic.compliant} />
-                            <Text style={[styles.statCount, { color: Colors.semantic.compliant }]}>
-                              {compliant}
-                            </Text>
-                          </View>
-                          <View style={styles.statBadge}>
-                            <MaterialIcons name="info" size={14} color={Colors.semantic.modifiable} />
-                            <Text style={[styles.statCount, { color: Colors.semantic.modifiable }]}>
-                              {modifiable}
-                            </Text>
-                          </View>
-                          <View style={styles.statBadge}>
-                            <MaterialIcons name="cancel" size={14} color={Colors.semantic.nonCompliant} />
-                            <Text style={[styles.statCount, { color: Colors.semantic.nonCompliant }]}>
-                              {nonCompliant}
-                            </Text>
-                          </View>
+                  <Card 
+                    key={scan.id} 
+                    style={styles.recentCard}
+                    variant="elevated"
+                    pressable
+                    onPress={() => {
+                      Alert.alert(
+                        'Scan Details',
+                        `${scan.items.length} items analyzed\n${compliant} compliant, ${modifiable} modifiable, ${nonCompliant} non-compliant`
+                      );
+                    }}
+                  >
+                    <View style={styles.recentCardContent}>
+                      <Text style={[styles.recentDate, { color: colors.secondaryText }]}>
+                        {format(scanDate, 'MMM d, yyyy • h:mm a')}
+                      </Text>
+                      <View style={styles.recentStats}>
+                        <View style={styles.statBadge}>
+                          <MaterialIcons name="check-circle" size={14} color={Colors.semantic.compliant} />
+                          <Text style={[styles.statCount, { color: Colors.semantic.compliant }]}>
+                            {compliant}
+                          </Text>
+                        </View>
+                        <View style={styles.statBadge}>
+                          <MaterialIcons name="info" size={14} color={Colors.semantic.modifiable} />
+                          <Text style={[styles.statCount, { color: Colors.semantic.modifiable }]}>
+                            {modifiable}
+                          </Text>
+                        </View>
+                        <View style={styles.statBadge}>
+                          <MaterialIcons name="cancel" size={14} color={Colors.semantic.nonCompliant} />
+                          <Text style={[styles.statCount, { color: Colors.semantic.nonCompliant }]}>
+                            {nonCompliant}
+                          </Text>
                         </View>
                       </View>
-                    </TouchableOpacity>
+                    </View>
                   </Card>
                 );
               })}

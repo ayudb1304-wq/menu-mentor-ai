@@ -16,7 +16,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
 import { Colors } from '../theme/colors';
 import { Typography, Spacing, BorderRadius, Shadows } from '../theme/styles';
-import { Card, LoadingOverlay } from '../components';
+import { Card, LoadingOverlay, SkeletonHistoryItem } from '../components';
 import historyService, { ScanHistory } from '../services/historyService';
 
 export const HistoryScreen: React.FC = () => {
@@ -82,18 +82,18 @@ export const HistoryScreen: React.FC = () => {
     const scanDate = item.scanDate?.toDate ? item.scanDate.toDate() : new Date();
 
     return (
-      <Card style={styles.scanCard}>
-        <TouchableOpacity
-          style={styles.scanContent}
-          activeOpacity={0.7}
-          onPress={() => {
-            // Navigate to detailed view (can be implemented later)
-            Alert.alert(
-              'Scan Details',
-              `${item.items.length} items analyzed\n${compliant} compliant, ${modifiable} modifiable, ${nonCompliant} non-compliant`
-            );
-          }}
-        >
+      <Card 
+        style={styles.scanCard}
+        variant="elevated"
+        pressable
+        onPress={() => {
+          // Navigate to detailed view (can be implemented later)
+          Alert.alert(
+            'Scan Details',
+            `${item.items.length} items analyzed\n${compliant} compliant, ${modifiable} modifiable, ${nonCompliant} non-compliant`
+          );
+        }}
+      >
           <View style={styles.scanHeader}>
             <View style={styles.scanInfo}>
               <Text style={[styles.scanDate, { color: colors.secondaryText }]}>
@@ -136,16 +136,27 @@ export const HistoryScreen: React.FC = () => {
             </View>
           </View>
 
-          {item.imageUrl && (
-            <Image source={{ uri: item.imageUrl }} style={styles.thumbnailImage} resizeMode="cover" />
-          )}
-        </TouchableOpacity>
+        {item.imageUrl && (
+          <Image source={{ uri: item.imageUrl }} style={styles.thumbnailImage} resizeMode="cover" />
+        )}
       </Card>
     );
   };
 
   if (loading) {
-    return <LoadingOverlay visible={true} message="Loading history..." />;
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={styles.listContent}>
+          <View style={styles.header}>
+            <Text style={[styles.title, { color: colors.primaryText }]}>Scan History</Text>
+          </View>
+          <SkeletonHistoryItem />
+          <SkeletonHistoryItem />
+          <SkeletonHistoryItem />
+          <SkeletonHistoryItem />
+        </View>
+      </SafeAreaView>
+    );
   }
 
   return (
@@ -209,9 +220,6 @@ const styles = StyleSheet.create({
   scanCard: {
     marginBottom: Spacing.md,
     overflow: 'hidden',
-  },
-  scanContent: {
-    flex: 1,
   },
   scanHeader: {
     flexDirection: 'row',
