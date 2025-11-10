@@ -10,13 +10,13 @@ import {
   RefreshControl,
   Alert,
 } from 'react-native';
-import { MaterialIcons, Feather } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
 import { Colors } from '../theme/colors';
 import { Typography, Spacing, BorderRadius, Shadows } from '../theme/styles';
 import { Card, LoadingOverlay } from '../components';
+import { History as HistoryIcon, Trash2, CheckCircle, Info, XCircle } from '../components/icons';
 import historyService, { ScanHistory } from '../services/historyService';
 
 export const HistoryScreen: React.FC = () => {
@@ -106,26 +106,26 @@ export const HistoryScreen: React.FC = () => {
               )}
             </View>
             <TouchableOpacity onPress={() => handleDeleteScan(item.id)}>
-              <Feather name="trash-2" size={20} color={colors.secondaryText} />
+              <Trash2 size={20} color={colors.secondaryText} />
             </TouchableOpacity>
           </View>
 
           <View style={styles.scanStats}>
             <View style={styles.statItem}>
-              <MaterialIcons name="check-circle" size={16} color={Colors.semantic.compliant} />
+              <CheckCircle size={16} color={Colors.semantic.compliant} />
               <Text style={[styles.statText, { color: Colors.semantic.compliant }]}>
                 {compliant}
               </Text>
             </View>
             <View style={styles.statItem}>
-              <MaterialIcons name="info" size={16} color={Colors.semantic.modifiable} />
+              <Info size={16} color={Colors.semantic.modifiable} />
               <Text style={[styles.statText, { color: Colors.semantic.modifiable }]}>
                 {modifiable}
               </Text>
             </View>
             <View style={styles.statItem}>
-              <MaterialIcons name="cancel" size={16} color={Colors.semantic.nonCompliant} />
-              <Text style={[styles.statText, { color: Colors.semantic.nonCompliant }]}>
+              <XCircle size={16} color={Colors.semantic.nonCompliant} />
+              <Text style={[styles.statText, { color: Colors.semantic.nonCompliant}]}>
                 {nonCompliant}
               </Text>
             </View>
@@ -152,7 +152,7 @@ export const HistoryScreen: React.FC = () => {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {history.length === 0 ? (
         <View style={styles.emptyState}>
-          <MaterialIcons name="history" size={64} color={colors.secondaryText} />
+          <HistoryIcon size={64} color={colors.secondaryText} />
           <Text style={[styles.emptyTitle, { color: colors.primaryText }]}>No Scan History</Text>
           <Text style={[styles.emptyText, { color: colors.secondaryText }]}>
             Your menu scans will appear here

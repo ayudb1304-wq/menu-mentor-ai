@@ -10,7 +10,6 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import { Feather, MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -19,6 +18,16 @@ import { useTheme } from '../theme/ThemeContext';
 import { Colors } from '../theme/colors';
 import { Typography, Spacing, BorderRadius, Shadows } from '../theme/styles';
 import { Button, Card, LoadingOverlay } from '../components';
+import { 
+  Camera, 
+  ImageIcon, 
+  CheckCircle, 
+  Utensils, 
+  History as HistoryIcon,
+  Info,
+  XCircle,
+  X 
+} from '../components/icons';
 import { ScanStackParamList } from '../navigation/types';
 import historyService, { ScanHistory } from '../services/historyService';
 
@@ -161,7 +170,7 @@ export const ScanOptionsScreen: React.FC = () => {
         {/* Header Section */}
         <View style={styles.header}>
           <View style={[styles.headerIcon, { backgroundColor: Colors.brand.blue + '20' }]}>
-            <MaterialIcons name="restaurant-menu" size={48} color={Colors.brand.blue} />
+            <Utensils size={48} color={Colors.brand.blue} />
           </View>
           <Text style={[styles.title, { color: colors.primaryText }]}>
             Scan a Menu
@@ -175,7 +184,7 @@ export const ScanOptionsScreen: React.FC = () => {
         <Button
           title="Start Scanning"
           onPress={() => setModalVisible(true)}
-          icon={<Feather name="camera" size={20} color={Colors.white} />}
+          icon={<Camera size={20} color={Colors.white} />}
           fullWidth
           style={styles.scanButton}
         />
@@ -186,19 +195,19 @@ export const ScanOptionsScreen: React.FC = () => {
             Tips for Best Results
           </Text>
           <View style={styles.tipRow}>
-            <Feather name="check-circle" size={16} color={Colors.brand.green} />
+            <CheckCircle size={16} color={Colors.brand.green} />
             <Text style={[styles.tipText, { color: colors.secondaryText }]}>
               Ensure good lighting for clear text
             </Text>
           </View>
           <View style={styles.tipRow}>
-            <Feather name="check-circle" size={16} color={Colors.brand.green} />
+            <CheckCircle size={16} color={Colors.brand.green} />
             <Text style={[styles.tipText, { color: colors.secondaryText }]}>
               Capture the entire menu section
             </Text>
           </View>
           <View style={styles.tipRow}>
-            <Feather name="check-circle" size={16} color={Colors.brand.green} />
+            <CheckCircle size={16} color={Colors.brand.green} />
             <Text style={[styles.tipText, { color: colors.secondaryText }]}>
               Avoid blurry or angled photos
             </Text>
@@ -212,7 +221,7 @@ export const ScanOptionsScreen: React.FC = () => {
           </Text>
           {recentScans.length === 0 ? (
             <View style={[styles.emptyState, { borderColor: colors.border }]}>
-              <MaterialIcons name="history" size={32} color={colors.secondaryText} />
+              <HistoryIcon size={32} color={colors.secondaryText} />
               <Text style={[styles.emptyText, { color: colors.secondaryText }]}>
                 No recent scans yet
               </Text>
@@ -242,19 +251,19 @@ export const ScanOptionsScreen: React.FC = () => {
                         </Text>
                         <View style={styles.recentStats}>
                           <View style={styles.statBadge}>
-                            <MaterialIcons name="check-circle" size={14} color={Colors.semantic.compliant} />
+                            <CheckCircle size={14} color={Colors.semantic.compliant} />
                             <Text style={[styles.statCount, { color: Colors.semantic.compliant }]}>
                               {compliant}
                             </Text>
                           </View>
                           <View style={styles.statBadge}>
-                            <MaterialIcons name="info" size={14} color={Colors.semantic.modifiable} />
+                            <Info size={14} color={Colors.semantic.modifiable} />
                             <Text style={[styles.statCount, { color: Colors.semantic.modifiable }]}>
                               {modifiable}
                             </Text>
                           </View>
                           <View style={styles.statBadge}>
-                            <MaterialIcons name="cancel" size={14} color={Colors.semantic.nonCompliant} />
+                            <XCircle size={14} color={Colors.semantic.nonCompliant} />
                             <Text style={[styles.statCount, { color: Colors.semantic.nonCompliant }]}>
                               {nonCompliant}
                             </Text>
@@ -284,19 +293,19 @@ export const ScanOptionsScreen: React.FC = () => {
                 Choose Image Source
               </Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Feather name="x" size={24} color={colors.secondaryText} />
+                <X size={24} color={colors.secondaryText} />
               </TouchableOpacity>
             </View>
 
             <View style={styles.optionsContainer}>
               <OptionCard
-                icon={<Feather name="camera" size={32} color={Colors.brand.blue} />}
+                icon={<Camera size={32} color={Colors.brand.blue} />}
                 title="Take Photo"
                 description="Use your camera to capture a menu"
                 onPress={handleTakePhoto}
               />
               <OptionCard
-                icon={<Feather name="image" size={32} color={Colors.brand.green} />}
+                icon={<ImageIcon size={32} color={Colors.brand.green} />}
                 title="Choose from Gallery"
                 description="Select an existing menu photo"
                 onPress={handleSelectFromGallery}

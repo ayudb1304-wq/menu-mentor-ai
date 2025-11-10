@@ -10,11 +10,11 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { Colors } from '../theme/colors';
 import { Typography, Spacing, BorderRadius } from '../theme/styles';
 import { Button, Chip, LoadingOverlay, Card } from '../components';
+import { Info } from '../components/icons';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { DIETARY_PRESETS } from '../services/userService';
 import { useNavigation, useRoute, RouteProp, CommonActions } from '@react-navigation/native';
@@ -158,7 +158,7 @@ export const ProfileSetupScreen: React.FC = () => {
             </Text>
             {isEditMode && isFreeEdit && (
               <View style={[styles.freeEditNotice, { backgroundColor: Colors.brand.blue + '20' }]}>
-                <MaterialIcons name="info" size={16} color={Colors.brand.blue} />
+                <Info size={16} color={Colors.brand.blue} />
                 <Text style={[styles.freeEditText, { color: Colors.brand.blue }]}>
                   You're using your one-time free edit. After this, changes will be locked for 30 days.
                 </Text>
