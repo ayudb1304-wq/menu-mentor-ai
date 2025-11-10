@@ -218,7 +218,11 @@ export const AnalysisScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent} 
+        showsVerticalScrollIndicator={false}
+        bounces={true}
+      >
         {/* Image Preview */}
         <View style={styles.imageContainer}>
           <Image source={{ uri: imageUri }} style={styles.resultImage} resizeMode="cover" />
@@ -331,7 +335,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: Spacing.xl,
+    paddingBottom: Spacing.xl * 2,
   },
   loadingContainer: {
     flex: 1,

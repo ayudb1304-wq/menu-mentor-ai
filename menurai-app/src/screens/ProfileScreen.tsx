@@ -13,7 +13,7 @@ import { MaterialIcons, Feather } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { Colors } from '../theme/colors';
 import { Typography, Spacing, BorderRadius, Shadows } from '../theme/styles';
-import { Button, Card, Chip, DottedBorder } from '../components';
+import { Button, Card, Chip, DottedBorder, AppHeader } from '../components';
 import { useAuth } from '../hooks/useAuth';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { useNavigation } from '@react-navigation/native';
@@ -44,16 +44,12 @@ export const ProfileScreen: React.FC = () => {
   const appVersion = Constants.expoConfig?.version || '1.0.0';
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <AppHeader />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.primaryText }]}>Profile</Text>
-        </View>
-
         {/* User Info Card */}
         <Card style={styles.userCard}>
           <View style={styles.userInfo}>
@@ -210,7 +206,7 @@ export const ProfileScreen: React.FC = () => {
           v{appVersion}
         </Text>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -221,12 +217,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: Spacing.lg,
     paddingBottom: Spacing.xxl,
-  },
-  header: {
-    marginBottom: Spacing.lg,
-  },
-  title: {
-    ...Typography.h2,
   },
   userCard: {
     marginBottom: Spacing.lg,
