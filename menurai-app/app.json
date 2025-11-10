@@ -1,0 +1,63 @@
+{
+  "expo": {
+    "name": "Menurai",
+    "slug": "menurai",
+    "version": "1.0.7",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "scheme": "menurai",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#007BFF"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.menurai.app",
+      "buildNumber": "1.0.0",
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app needs access to camera to scan menu images.",
+        "NSPhotoLibraryUsageDescription": "This app needs access to photo library to select menu images."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#007BFF"
+      },
+      "package": "com.menurai.app",
+      "versionCode": 1,
+      "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE"],
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/icon.png",
+      "bundler": "metro",
+      "name": "Menurai",
+      "shortName": "Menurai",
+      "description": "AI-powered dietary menu analysis for personalized dining",
+      "display": "standalone",
+      "orientation": "portrait",
+      "backgroundColor": "#FFFFFF",
+      "themeColor": "#007BFF",
+      "lang": "en",
+      "startUrl": "/",
+      "scope": "/",
+      "barStyle": "default",
+      "preferRelatedApplications": false,
+      "categories": ["food", "health", "lifestyle"],
+      "serviceWorkerPath": "service-worker.js"
+    },
+    "plugins": [
+      "expo-image-picker"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "your-project-id"
+      }
+    }
+  }
+}

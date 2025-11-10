@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
+    <!-- Viewport and Mobile Optimization -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes, viewport-fit=cover" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Menurai" />
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- Theme Color -->
+    <meta name="theme-color" content="#007BFF" />
+    <meta name="msapplication-TileColor" content="#007BFF" />
+
+    <!-- Icons -->
+    <link rel="icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" href="/assets/icon.png" />
+
+    <!-- Meta Information -->
+    <meta name="description" content="AI-powered dietary menu analysis for personalized dining" />
+    <meta name="keywords" content="menu analysis, dietary restrictions, AI, food, health" />
+    <meta name="author" content="Menurai" />
+
+    <title>Menurai</title>
+
+    <!-- React Native Web Reset Styles -->
+    <style id="expo-reset">
+      /* These styles make the body full-height - using vh for Safari compatibility */
+      html,
+      body {
+        height: 100%;
+        min-height: 100vh;
+        min-height: -webkit-fill-available;
+        margin: 0;
+        padding: 0;
+        position: relative;
+      }
+
+      /* Safari-specific fixes */
+      html {
+        height: -webkit-fill-available;
+      }
+
+      /* These styles disable body scrolling if you are using <ScrollView> */
+      body {
+        overflow: hidden;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      /* These styles make the root element full-height */
+      #root {
+        display: flex;
+        height: 100%;
+        min-height: 100vh;
+        min-height: -webkit-fill-available;
+        width: 100%;
+        flex: 1;
+        position: relative;
+      }
+
+      /* Prevent text size adjustment on orientation change */
+      html {
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
+      }
+
+      /* Ensure proper touch handling on iOS */
+      * {
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      /* Fix for Safari scrolling issues */
+      @supports (-webkit-touch-callout: none) {
+        body {
+          min-height: -webkit-fill-available;
+        }
+      }
+
+      /* Ensure scrollable areas work on iOS Safari */
+      [data-scrollable="true"] {
+        overflow-y: scroll;
+        -webkit-overflow-scrolling: touch;
+      }
+    </style>
+  </head>
+
+  <body>
+    <noscript>
+      <div style="display: flex; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; padding: 20px; text-align: center;">
+        <p>You need to enable JavaScript to run this app.</p>
+      </div>
+    </noscript>
+    <div id="root"></div>
+  </body>
+</html>

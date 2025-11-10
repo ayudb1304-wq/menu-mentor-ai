@@ -26,7 +26,7 @@
     "rules": "storage.rules"
   },
   "hosting": {
-    "public": "menu_mentor_app/build/web",
+    "public": "menurai-app/dist",
     "ignore": [
       "firebase.json",
       "**/.*",
@@ -36,6 +36,35 @@
       {
         "source": "**",
         "destination": "/index.html"
+      }
+    ],
+    "headers": [
+      {
+        "source": "/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=3600, s-maxage=600"
+          }
+        ]
+      },
+      {
+        "source": "/service-worker.js",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
+      },
+      {
+        "source": "/manifest.json",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "application/manifest+json"
+          }
+        ]
       }
     ]
   }
