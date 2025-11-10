@@ -4,6 +4,15 @@ import * as Font from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { ThemeProvider } from './src/theme/ThemeContext';
 import { AppNavigator } from './src/navigation/AppNavigator';
+import {
+  MaterialIcons,
+  MaterialCommunityIcons,
+  Feather,
+  FontAwesome,
+  Ionicons,
+  AntDesign,
+  Entypo,
+} from '@expo/vector-icons';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -14,14 +23,15 @@ export default function App() {
   useEffect(() => {
     async function loadFonts() {
       try {
-        // For now, we'll use system fonts since we haven't added Inter fonts yet
-        // In production, you would download and add Inter font files to assets/fonts/
+        // Load icon fonts from @expo/vector-icons
         await Font.loadAsync({
-          // Placeholder for custom fonts
-          // 'Inter-Regular': require('./assets/fonts/Inter-Regular.ttf'),
-          // 'Inter-Medium': require('./assets/fonts/Inter-Medium.ttf'),
-          // 'Inter-SemiBold': require('./assets/fonts/Inter-SemiBold.ttf'),
-          // 'Inter-Bold': require('./assets/fonts/Inter-Bold.ttf'),
+          ...MaterialIcons.font,
+          ...MaterialCommunityIcons.font,
+          ...Feather.font,
+          ...FontAwesome.font,
+          ...Ionicons.font,
+          ...AntDesign.font,
+          ...Entypo.font,
         });
       } catch (error) {
         console.warn('Error loading fonts:', error);
