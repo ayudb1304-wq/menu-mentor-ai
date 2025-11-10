@@ -4,13 +4,18 @@
  */
 
 import { Platform } from 'react-native';
+import React from 'react';
 
-// Import from both libraries
-import * as LucideWeb from 'lucide-react';
-import * as LucideNative from 'lucide-react-native';
+// Conditional imports based on platform
+let Icons: any;
 
-// Select the correct library based on platform
-const Icons = Platform.OS === 'web' ? LucideWeb : LucideNative;
+if (Platform.OS === 'web') {
+  // @ts-ignore - Dynamic import for web
+  Icons = require('lucide-react');
+} else {
+  // @ts-ignore - Dynamic import for native
+  Icons = require('lucide-react-native');
+}
 
 // Re-export all icons from the selected library
 export const Camera = Icons.Camera;

@@ -9,12 +9,11 @@ import {
   Alert,
   Animated,
 } from 'react-native';
-import { MaterialIcons, Feather } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
 import { Colors } from '../theme/colors';
 import { Typography, Spacing, BorderRadius } from '../theme/styles';
-import { Button, Card, LoadingOverlay } from '../components';
+import { Button, Card, LoadingOverlay, WebIcon } from '../components';
 import { ScanStackParamList } from '../navigation/types';
 import menuAnalysisService, { MenuItem, AnalysisResult } from '../services/menuAnalysisService';
 import historyService from '../services/historyService';
@@ -118,7 +117,7 @@ const MenuItemCard: React.FC<{ item: MenuItem }> = ({ item }) => {
   return (
     <Card style={[styles.itemCard, { borderColor: getClassificationColor() }]}>
       <View style={styles.itemHeader}>
-        <MaterialIcons
+        <WebIcon
           name={getClassificationIcon()}
           size={24}
           color={getClassificationColor()}
@@ -203,7 +202,7 @@ export const AnalysisScreen: React.FC = () => {
         <View style={styles.loadingContainer}>
           <Image source={{ uri: imageUri }} style={styles.previewImage} resizeMode="cover" />
           <View style={styles.loadingContent}>
-            <MaterialIcons name="restaurant-menu" size={48} color={Colors.brand.blue} />
+            <WebIcon name="restaurant-menu" size={48} color={Colors.brand.blue} />
             <LoadingText />
             <Text style={[styles.loadingHint, { color: colors.secondaryText }]}>
               This may take up to 30 seconds
@@ -239,7 +238,7 @@ export const AnalysisScreen: React.FC = () => {
               <View style={styles.statsRow}>
                 <View style={styles.statItem}>
                   <View style={[styles.statIcon, { backgroundColor: Colors.semantic.compliant + '20' }]}>
-                    <MaterialIcons name="check-circle" size={24} color={Colors.semantic.compliant} />
+                    <WebIcon name="check-circle" size={24} color={Colors.semantic.compliant} />
                   </View>
                   <Text style={[styles.statCount, { color: colors.primaryText }]}>{compliant.length}</Text>
                   <Text style={[styles.statLabel, { color: colors.secondaryText }]}>Safe</Text>
@@ -247,7 +246,7 @@ export const AnalysisScreen: React.FC = () => {
 
                 <View style={styles.statItem}>
                   <View style={[styles.statIcon, { backgroundColor: Colors.semantic.modifiable + '20' }]}>
-                    <MaterialIcons name="info" size={24} color={Colors.semantic.modifiable} />
+                    <WebIcon name="info" size={24} color={Colors.semantic.modifiable} />
                   </View>
                   <Text style={[styles.statCount, { color: colors.primaryText }]}>{modifiable.length}</Text>
                   <Text style={[styles.statLabel, { color: colors.secondaryText }]}>Modifiable</Text>
@@ -255,7 +254,7 @@ export const AnalysisScreen: React.FC = () => {
 
                 <View style={styles.statItem}>
                   <View style={[styles.statIcon, { backgroundColor: Colors.semantic.nonCompliant + '20' }]}>
-                    <MaterialIcons name="cancel" size={24} color={Colors.semantic.nonCompliant} />
+                    <WebIcon name="cancel" size={24} color={Colors.semantic.nonCompliant} />
                   </View>
                   <Text style={[styles.statCount, { color: colors.primaryText }]}>{nonCompliant.length}</Text>
                   <Text style={[styles.statLabel, { color: colors.secondaryText }]}>Restricted</Text>
@@ -302,7 +301,7 @@ export const AnalysisScreen: React.FC = () => {
         {/* Error State */}
         {error && !analysisResult && (
           <Card style={styles.errorCard}>
-            <MaterialIcons name="error-outline" size={48} color={Colors.semantic.nonCompliant} />
+            <WebIcon name="error-outline" size={48} color={Colors.semantic.nonCompliant} />
             <Text style={[styles.errorTitle, { color: colors.primaryText }]}>Analysis Failed</Text>
             <Text style={[styles.errorMessage, { color: colors.secondaryText }]}>{error}</Text>
             <Button title="Try Again" onPress={startAnalysis} style={styles.retryButton} />
@@ -314,7 +313,7 @@ export const AnalysisScreen: React.FC = () => {
           <Button
             title="Scan Another Menu"
             variant="primary"
-            icon={<Feather name="camera" size={20} color={Colors.white} />}
+            icon={<WebIcon name="camera" size={20} color={Colors.white} />}
             onPress={() => navigation.goBack()}
             fullWidth
             style={styles.actionButton}

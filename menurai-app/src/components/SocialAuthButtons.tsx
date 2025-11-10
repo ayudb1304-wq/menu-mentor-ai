@@ -1,9 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import { FontAwesome, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Platform } from 'react-native';
 import { Colors } from '../theme/colors';
 import { Typography, Spacing, BorderRadius, Shadows } from '../theme/styles';
 import { useTheme } from '../theme/ThemeContext';
+import { WebIcon } from './WebIcon';
 
 interface SocialButtonProps {
   onPress: () => void;
@@ -73,7 +73,7 @@ export const SocialAuthButtons: React.FC<SocialAuthButtonsProps> = ({
     <View style={styles.container}>
       <SocialButton
         onPress={onGoogleSignIn}
-        icon={<FontAwesome name="google" size={20} color={Colors.white} />}
+        icon={<WebIcon name="google" size={20} color={Colors.white} />}
         title="Continue with Google"
         backgroundColor={Colors.social.google}
         disabled={loading}
@@ -82,7 +82,7 @@ export const SocialAuthButtons: React.FC<SocialAuthButtonsProps> = ({
       <SocialButton
         onPress={onXSignIn || (() => handleComingSoon('X'))}
         icon={
-          <FontAwesome5
+          <WebIcon
             name="twitter"
             size={20}
             color={isDarkMode ? Colors.black : Colors.white}
@@ -96,7 +96,7 @@ export const SocialAuthButtons: React.FC<SocialAuthButtonsProps> = ({
 
       <SocialButton
         onPress={onFacebookSignIn || (() => handleComingSoon('Facebook'))}
-        icon={<FontAwesome5 name="facebook-f" size={20} color={Colors.white} />}
+        icon={<WebIcon name="facebook-f" size={20} color={Colors.white} />}
         title="Continue with Facebook"
         backgroundColor={Colors.social.facebook}
         disabled={loading || !onFacebookSignIn}
@@ -105,7 +105,7 @@ export const SocialAuthButtons: React.FC<SocialAuthButtonsProps> = ({
       <SocialButton
         onPress={onGitHubSignIn || (() => handleComingSoon('GitHub'))}
         icon={
-          <FontAwesome5
+          <WebIcon
             name="github"
             size={20}
             color={isDarkMode ? Colors.black : Colors.white}

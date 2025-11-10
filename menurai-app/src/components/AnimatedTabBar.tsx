@@ -167,7 +167,7 @@ export const AnimatedTabBar: React.FC<BottomTabBarProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    height: Platform.select({ ios: 80, android: 70, default: 70 }),
+    height: Platform.select({ ios: 80, android: 70, web: 65, default: 70 }),
     position: 'relative',
     ...Shadows.sm,
   },
