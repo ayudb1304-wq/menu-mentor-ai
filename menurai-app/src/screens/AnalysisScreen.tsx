@@ -9,7 +9,7 @@ import {
   Alert,
   Animated,
 } from 'react-native';
-import { MaterialIcons, Feather } from '@expo/vector-icons';
+import { Utensils, CheckCircle, Info, XCircle, AlertCircle, Camera } from '../components/icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
 import { Colors } from '../theme/colors';
@@ -115,18 +115,27 @@ const MenuItemCard: React.FC<{ item: MenuItem }> = ({ item }) => {
     }
   };
 
-  return (
-    <Card 
-      variant="elevated" 
-      style={[styles.itemCard, { borderColor: getClassificationColor() }]}
-      pressable
-    >
-      <View style={styles.itemHeader}>
-        <MaterialIcons
-          name={getClassificationIcon()}
-          size={24}
-          color={getClassificationColor()}
-        />
+      const IconComponent = () => {
+        switch (item.classification) {
+          case 'compliant':
+            return <CheckCircle size={24} color={getClassificationColor()} />;
+          case 'modifiable':
+            return <Info size={24} color={getClassificationColor()} />;
+          case 'non_compliant':
+            return <XCircle size={24} color={getClassificationColor()} />;
+          default:
+            return <AlertCircle size={24} color={getClassificationColor()} />;
+        }
+      };
+
+      return (
+        <Card 
+          variant="elevated" 
+          style={[styles.itemCard, { borderColor: getClassificationColor() }]}
+          pressable
+        >
+          <View style={styles.itemHeader}>
+            <IconComponent />
         <Text style={[styles.itemName, { color: colors.primaryText }]}>
           {item.name}
         </Text>
@@ -216,7 +225,7 @@ export const AnalysisScreen: React.FC = () => {
           </View>
           <View style={styles.loadingContainer}>
             <View style={styles.loadingContent}>
-              <MaterialIcons name="restaurant-menu" size={48} color={Colors.brand.blue} />
+              <Utensils size={48} color={Colors.brand.blue} />
               <LoadingText />
               <Text style={[styles.loadingHint, { color: colors.secondaryText }]}>
                 This may take up to 30 seconds
@@ -259,25 +268,25 @@ export const AnalysisScreen: React.FC = () => {
 
               {/* Statistics */}
               <View style={styles.statsRow}>
-                <View style={styles.statItem}>
-                  <View style={[styles.statIcon, { backgroundColor: Colors.semantic.compliant + '20' }]}>
-                    <MaterialIcons name="check-circle" size={24} color={Colors.semantic.compliant} />
+              <View style={styles.statItem}>
+                <View style={[styles.statIcon, { backgroundColor: Colors.semantic.compliant + '20' }]}>
+                  <CheckCircle size={24} color={Colors.semantic.compliant} />
                   </View>
                   <Text style={[styles.statCount, { color: colors.primaryText }]}>{compliant.length}</Text>
                   <Text style={[styles.statLabel, { color: colors.secondaryText }]}>Safe</Text>
                 </View>
 
-                <View style={styles.statItem}>
-                  <View style={[styles.statIcon, { backgroundColor: Colors.semantic.modifiable + '20' }]}>
-                    <MaterialIcons name="info" size={24} color={Colors.semantic.modifiable} />
+              <View style={styles.statItem}>
+                <View style={[styles.statIcon, { backgroundColor: Colors.semantic.modifiable + '20' }]}>
+                  <Info size={24} color={Colors.semantic.modifiable} />
                   </View>
                   <Text style={[styles.statCount, { color: colors.primaryText }]}>{modifiable.length}</Text>
                   <Text style={[styles.statLabel, { color: colors.secondaryText }]}>Modifiable</Text>
                 </View>
 
-                <View style={styles.statItem}>
-                  <View style={[styles.statIcon, { backgroundColor: Colors.semantic.nonCompliant + '20' }]}>
-                    <MaterialIcons name="cancel" size={24} color={Colors.semantic.nonCompliant} />
+              <View style={styles.statItem}>
+                <View style={[styles.statIcon, { backgroundColor: Colors.semantic.nonCompliant + '20' }]}>
+                  <XCircle size={24} color={Colors.semantic.nonCompliant} />
                   </View>
                   <Text style={[styles.statCount, { color: colors.primaryText }]}>{nonCompliant.length}</Text>
                   <Text style={[styles.statLabel, { color: colors.secondaryText }]}>Restricted</Text>
@@ -326,7 +335,7 @@ export const AnalysisScreen: React.FC = () => {
         {/* Error State */}
         {error && !analysisResult && (
           <Card style={styles.errorCard}>
-            <MaterialIcons name="error-outline" size={48} color={Colors.semantic.nonCompliant} />
+            <AlertCircle size={48} color={Colors.semantic.nonCompliant} />
             <Text style={[styles.errorTitle, { color: colors.primaryText }]}>Analysis Failed</Text>
             <Text style={[styles.errorMessage, { color: colors.secondaryText }]}>{error}</Text>
             <Button title="Try Again" onPress={startAnalysis} style={styles.retryButton} />
@@ -338,7 +347,7 @@ export const AnalysisScreen: React.FC = () => {
           <Button
             title="Scan Another Menu"
             variant="primary"
-            icon={<Feather name="camera" size={20} color={Colors.white} />}
+            icon={<Camera size={20} color={Colors.white} />}
             onPress={() => navigation.goBack()}
             fullWidth
             style={styles.actionButton}

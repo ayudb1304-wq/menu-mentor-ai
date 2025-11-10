@@ -10,7 +10,7 @@ import {
   RefreshControl,
   Alert,
 } from 'react-native';
-import { MaterialIcons, Feather } from '@expo/vector-icons';
+import { CheckCircle, Info, XCircle, Trash2, Share2, History as HistoryIcon } from '../components/icons';
 import { format } from 'date-fns';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
@@ -123,25 +123,25 @@ export const HistoryScreen: React.FC = () => {
               )}
             </View>
             <TouchableOpacity onPress={() => handleDeleteScan(item.id)}>
-              <Feather name="trash-2" size={20} color={colors.secondaryText} />
+              <Trash2 size={20} color={colors.secondaryText} />
             </TouchableOpacity>
           </View>
 
           <View style={styles.scanStats}>
             <View style={styles.statItem}>
-              <MaterialIcons name="check-circle" size={16} color={Colors.semantic.compliant} />
+              <CheckCircle size={16} color={Colors.semantic.compliant} />
               <Text style={[styles.statText, { color: Colors.semantic.compliant }]}>
                 {compliant}
               </Text>
             </View>
             <View style={styles.statItem}>
-              <MaterialIcons name="info" size={16} color={Colors.semantic.modifiable} />
+              <Info size={16} color={Colors.semantic.modifiable} />
               <Text style={[styles.statText, { color: Colors.semantic.modifiable }]}>
                 {modifiable}
               </Text>
             </View>
             <View style={styles.statItem}>
-              <MaterialIcons name="cancel" size={16} color={Colors.semantic.nonCompliant} />
+              <XCircle size={16} color={Colors.semantic.nonCompliant} />
               <Text style={[styles.statText, { color: Colors.semantic.nonCompliant }]}>
                 {nonCompliant}
               </Text>
