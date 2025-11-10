@@ -10,7 +10,7 @@ import {
   Animated,
   Platform,
 } from 'react-native';
-import { LinearGradient } from 'react-native-linear-gradient';
+import { GradientView } from './GradientView';
 import { Colors } from '../theme/colors';
 import { Typography, BorderRadius, Spacing } from '../theme/styles';
 import { useTheme } from '../theme/ThemeContext';
@@ -263,14 +263,14 @@ export const Button: React.FC<ButtonProps> = ({
           onPressOut={handlePressOut}
           {...props}
         >
-          <LinearGradient
+          <GradientView
             colors={getGradientColors()}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.gradient}
           >
             {renderContent()}
-          </LinearGradient>
+          </GradientView>
         </TouchableOpacity>
       </Animated.View>
     );

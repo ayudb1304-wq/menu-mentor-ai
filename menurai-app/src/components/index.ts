@@ -1,5 +1,6 @@
 export { Button } from './Button';
 export { Card } from './Card';
+export { GradientView } from './GradientView';
 export { Chip } from './Chip';
 export { LoadingOverlay } from './LoadingOverlay';
 export { DottedBorder } from './DottedBorder';
