@@ -1,8 +1,16 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, browserLocalPersistence, setPersistence, Auth } from 'firebase/auth';
+import {
+  getAuth,
+  initializeAuth,
+  browserLocalPersistence,
+  setPersistence,
+  Auth,
+} from 'firebase/auth';
+import { getReactNativePersistence } from 'firebase/auth/react-native';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { getFunctions } from 'firebase/functions';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
 const firebaseConfig = {
@@ -33,7 +41,6 @@ const firebaseConfig = {
   },
 };
 
-// Get the appropriate config based on platform
 const getFirebaseConfig = () => {
   if (Platform.OS === 'web') {
     return firebaseConfig.web;
@@ -42,20 +49,26 @@ const getFirebaseConfig = () => {
   } else if (Platform.OS === 'android') {
     return firebaseConfig.android;
   }
-  return firebaseConfig.web; // Default fallback
+  return firebaseConfig.web;
 };
 
-// Initialize Firebase
 const app = initializeApp(getFirebaseConfig());
 
-const auth: Auth = getAuth(app);
-setPersistence(auth, browserLocalPersistence).catch((error) => {
-  console.error('Error setting persistence:', error);
-});
+let auth: Auth;
+if (Platform.OS === 'web') {
+  auth = getAuth(app);
+  setPersistence(auth, browserLocalPersistence).catch((error) => {
+    console.error('Error setting persistence:', error);
+  });
+} else {
+  auth = initializeAuth(app, {
+    persistence: getReactNativePersistence(AsyncStorage),
+  });
+}
 
-// Initialize other Firebase services
 const db = getFirestore(app);
 const storage = getStorage(app);
 const functions = getFunctions(app, 'us-central1');
 
 export { app, auth, db, storage, functions };
+
