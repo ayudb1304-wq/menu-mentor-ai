@@ -31,12 +31,12 @@ type NavigationProp = CompositeNavigationProp<
 export const HistoryScreen: React.FC = () => {
   const { colors } = useTheme();
   const navigation = useNavigation<NavigationProp>();
-  const { profile } = useUserProfile();
+  const { profile, isPremiumUser } = useUserProfile();
   const [history, setHistory] = useState<ScanHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   
-  const isPremium = profile?.isPremium || false;
+  const isPremium = isPremiumUser;
   const FREE_SCAN_LIMIT = 3;
 
   // Reload history when screen comes into focus
@@ -103,10 +103,14 @@ export const HistoryScreen: React.FC = () => {
         'Upgrade to Premium to view your full scan history. Free users can view up to 3 recent scans.',
         [
           { text: 'Cancel', style: 'cancel' },
-          { text: 'Upgrade', onPress: () => {
-            // Navigate to profile/premium screen (can be implemented later)
-            Alert.alert('Coming Soon', 'Premium upgrade will be available soon!');
-          }},
+          {
+            text: 'Upgrade',
+            onPress: () =>
+              navigation.navigate('Scan', {
+                screen: 'Paywall',
+                params: { context: 'scanLimit' },
+              }),
+          },
         ]
       );
     } else {

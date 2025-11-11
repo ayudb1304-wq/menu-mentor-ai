@@ -6,10 +6,11 @@ export type RootStackParamList = {
 
 export type HomeTabParamList = {
   Scan: {
-    screen?: 'ScanOptions' | 'Analysis' | 'AnalysisResult';
+    screen?: 'ScanOptions' | 'Analysis' | 'AnalysisResult' | 'Paywall';
     params?: {
       imageUri?: string;
       scanId?: string;
+      context?: 'addProfile' | 'scanLimit';
     };
   } | undefined;
   History: undefined;

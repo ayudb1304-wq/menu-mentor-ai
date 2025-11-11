@@ -11,6 +11,7 @@ interface UseUserProfileReturn {
   isFreeEdit: boolean;
   canScan: boolean;
   remainingScans: number;
+  isPremiumUser: boolean;
   updateDietaryPreferences: (
     dietaryPresets: string[],
     customRestrictions: string[]
@@ -30,6 +31,10 @@ export const useUserProfile = (): UseUserProfileReturn => {
   // Calculate scan permissions
   const canScan = userService.canScan(profile);
   const remainingScans = userService.getRemainingScans(profile);
+  const isPremiumUser =
+    profile?.subscriptionStatus === 'active' &&
+    !!profile?.validUntil &&
+    profile.validUntil.toDate().getTime() > Date.now();
 
   useEffect(() => {
     if (!user) {
@@ -102,6 +107,7 @@ export const useUserProfile = (): UseUserProfileReturn => {
     isFreeEdit,
     canScan,
     remainingScans,
+    isPremiumUser,
     updateDietaryPreferences,
     refreshProfile,
   };

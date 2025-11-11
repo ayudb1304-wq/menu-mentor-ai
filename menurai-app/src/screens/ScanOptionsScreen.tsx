@@ -39,7 +39,7 @@ type NavigationProp = StackNavigationProp<ScanStackParamList, 'ScanOptions'>;
 export const ScanOptionsScreen: React.FC = () => {
   const { colors } = useTheme();
   const navigation = useNavigation<NavigationProp>();
-  const { canScan, remainingScans, profile } = useUserProfile();
+  const { canScan, remainingScans, profile, isPremiumUser } = useUserProfile();
   const [modalVisible, setModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [recentScans, setRecentScans] = useState<ScanHistory[]>([]);
@@ -213,7 +213,7 @@ export const ScanOptionsScreen: React.FC = () => {
           </GlassCard>
 
           {/* Scan Limit Info */}
-          {!profile?.isPremium && (
+          {!isPremiumUser && (
             <GlassCard style={styles.limitCard} intensity={50}>
               <Text style={[styles.limitText, { color: colors.secondaryText }]}>
                 {remainingScans > 0 

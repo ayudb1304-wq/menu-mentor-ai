@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -9,28 +9,65 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
-import { Utensils, Edit2, Lock, Info, HelpCircle, ChevronRight, User, Plus } from '../components/icons';
+import { Utensils, Edit2, Lock, Info, HelpCircle, ChevronRight, User, Plus, Star } from '../components/icons';
 import { useTheme } from '../theme/ThemeContext';
 import { Colors } from '../theme/colors';
-import { Typography, Spacing, BorderRadius, Shadows } from '../theme/styles';
+import { Typography, Spacing, BorderRadius } from '../theme/styles';
 import { Button, Card, Chip } from '../components';
 import { useAuth } from '../hooks/useAuth';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { useNavigation } from '@react-navigation/native';
 import Constants from 'expo-constants';
+import { format } from 'date-fns';
+import { getFunctions } from 'firebase/functions';
+import { functions } from '../config/firebase';
+const CANCEL_SUBSCRIPTION_URL = 'https://cancelsubscription-zlvprr7dyq-uc.a.run.app';
+
+
+const PLAN_LABELS: Record<string, string> = {
+  plan_PREMIUM_MONTHLY: 'Premium Monthly',
+  plan_PREMIUM_YEARLY: 'Premium Yearly',
+};
+
+const SUBSCRIPTION_STATUS_LABELS: Record<string, string> = {
+  free: 'Free',
+  pending: 'Pending Activation',
+  active: 'Active',
+  failed: 'Payment Failed',
+  cancelled: 'Cancelled',
+  pending_cancel: 'Cancellation Pending',
+};
 
 export const ProfileScreen: React.FC = () => {
-  const { colors, isDarkMode } = useTheme();
+  const { colors } = useTheme();
   const { user, signOut } = useAuth();
-  const { profile, canEditDietaryPresets, daysRemainingForEdit, isFreeEdit } = useUserProfile();
+  const {
+    profile,
+    canEditDietaryPresets,
+    daysRemainingForEdit,
+    isFreeEdit,
+    isPremiumUser,
+  } = useUserProfile();
   const navigation = useNavigation<any>();
+  const [cancelLoading, setCancelLoading] = useState(false);
+
+  const subscriptionStatus = profile?.subscriptionStatus ?? 'free';
+  const subscriptionStatusLabel =
+    SUBSCRIPTION_STATUS_LABELS[subscriptionStatus as keyof typeof SUBSCRIPTION_STATUS_LABELS] ||
+    'Free';
+  const planLabel = profile?.planId ? PLAN_LABELS[profile.planId] ?? 'Premium Plan' : 'Free Plan';
+  const validUntilDate =
+    profile?.validUntil && typeof profile.validUntil.toDate === 'function'
+      ? profile.validUntil.toDate()
+      : null;
+  const validUntilText = validUntilDate ? format(validUntilDate, 'MMM d, yyyy') : null;
 
   const handleEditProfile = () => {
     navigation.navigate('ProfileSetup', { isEditMode: true });
   };
 
   const handleAddProfile = () => {
-    if (!profile?.isPremium) {
+    if (!isPremiumUser) {
       // Freemium user - navigate to paywall with context
       // Navigate to Scan tab, then to Paywall screen with context
       navigation.navigate('Scan', { screen: 'Paywall', params: { context: 'addProfile' } });
@@ -43,6 +80,67 @@ export const ProfileScreen: React.FC = () => {
         [{ text: 'OK' }]
       );
     }
+  };
+
+  const requestSubscriptionCancellation = async () => {
+    try {
+      setCancelLoading(true);
+      if (!user) {
+        throw new Error('You must be signed in to cancel your subscription.');
+      }
+
+      const idToken = await user.getIdToken();
+
+      const response = await fetch(CANCEL_SUBSCRIPTION_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({}),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Unable to cancel subscription. Please try again later.');
+      }
+
+      let message = 'Your subscription will end at the close of the current billing period.';
+      try {
+        const result = await response.json();
+        if (result?.message) {
+          message = result.message;
+        }
+      } catch (parseError) {
+        console.warn('Failed to parse cancel subscription response:', parseError);
+      }
+
+      Alert.alert('Cancellation Requested', message);
+    } catch (error: any) {
+      console.error('Cancel subscription error:', error);
+      const message =
+        (error?.message as string) ||
+        (error?.details as string) ||
+        'Unable to cancel subscription. Please try again later.';
+      Alert.alert('Error', message);
+    } finally {
+      setCancelLoading(false);
+    }
+  };
+
+  const handleCancelSubscription = () => {
+    const message = validUntilText
+      ? `Your premium access will continue until ${validUntilText}. Do you want to cancel your subscription?`
+      : 'Your premium access will remain active until the end of the current billing cycle. Do you want to cancel your subscription?';
+
+    Alert.alert('Cancel Subscription', message, [
+      { text: 'Keep Subscription', style: 'cancel' },
+      {
+        text: 'Cancel at Cycle End',
+        style: 'destructive',
+        onPress: requestSubscriptionCancellation,
+      },
+    ]);
   };
 
   const handleSignOut = async () => {
@@ -90,6 +188,75 @@ export const ProfileScreen: React.FC = () => {
               <Plus size={20} color={Colors.brand.blue} />
             </TouchableOpacity>
           </View>
+        </Card>
+
+        {/* Subscription Card */}
+        <Card style={styles.subscriptionCard}>
+          <View style={styles.subscriptionHeader}>
+            <View style={[styles.subscriptionIcon, { backgroundColor: Colors.brand.blue + '20' }]}>
+              <Star size={24} color={Colors.brand.blue} fill={Colors.brand.blue} />
+            </View>
+            <View style={styles.subscriptionDetails}>
+              <Text style={[styles.subscriptionTitle, { color: colors.primaryText }]}>
+                Premium Status
+              </Text>
+              <Text
+                style={[
+                  styles.subscriptionStatus,
+                  { color: isPremiumUser ? Colors.brand.green : colors.secondaryText },
+                ]}
+              >
+                {subscriptionStatusLabel}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.subscriptionMeta}>
+            <Text style={[styles.subscriptionMetaText, { color: colors.secondaryText }]}>
+              Plan: {planLabel}
+            </Text>
+            {validUntilText && (
+              <Text style={[styles.subscriptionMetaText, { color: colors.secondaryText }]}>
+                Valid until {validUntilText}
+              </Text>
+            )}
+          </View>
+
+          {subscriptionStatus === 'pending' && (
+            <Text style={[styles.subscriptionMessage, { color: colors.secondaryText }]}>
+              {`We're processing your payment. Premium features will unlock once Razorpay confirms the subscription.`}
+            </Text>
+          )}
+          {subscriptionStatus === 'failed' && (
+            <Text style={[styles.subscriptionMessage, { color: Colors.semantic.nonCompliant }]}>
+              Payment failed. Please try again from the paywall or update your payment method.
+            </Text>
+          )}
+          {subscriptionStatus === 'cancelled' && validUntilText && (
+            <Text style={[styles.subscriptionMessage, { color: colors.secondaryText }]}>
+              Premium access ended on {validUntilText}. Upgrade again to regain full access.
+            </Text>
+          )}
+
+          {subscriptionStatus === 'active' && (
+            <Button
+              title="Cancel Subscription"
+              onPress={handleCancelSubscription}
+              variant="outline"
+              fullWidth
+              loading={cancelLoading}
+              style={styles.subscriptionAction}
+            />
+          )}
+
+          {!isPremiumUser && subscriptionStatus !== 'active' && (
+            <Button
+              title="Upgrade to Premium"
+              onPress={() => navigation.navigate('Scan', { screen: 'Paywall', params: { context: 'scanLimit' } })}
+              icon={<Star size={18} color={Colors.white} fill={Colors.white} />}
+              fullWidth
+              style={styles.subscriptionAction}
+            />
+          )}
         </Card>
 
         {/* Dietary Profile Card */}
@@ -213,6 +380,48 @@ const styles = StyleSheet.create({
   },
   userCard: {
     marginBottom: Spacing.lg,
+  },
+  subscriptionCard: {
+    marginBottom: Spacing.lg,
+    padding: Spacing.lg,
+  },
+  subscriptionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  subscriptionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Spacing.md,
+  },
+  subscriptionDetails: {
+    flex: 1,
+  },
+  subscriptionTitle: {
+    ...Typography.bodyMedium,
+    fontWeight: '600' as '600',
+    marginBottom: Spacing.xs,
+  },
+  subscriptionStatus: {
+    ...Typography.h5,
+  },
+  subscriptionMeta: {
+    marginBottom: Spacing.md,
+    gap: Spacing.xs,
+  },
+  subscriptionMetaText: {
+    ...Typography.caption,
+  },
+  subscriptionMessage: {
+    ...Typography.bodySmall,
+    marginBottom: Spacing.md,
+  },
+  subscriptionAction: {
+    marginTop: Spacing.sm,
   },
   userInfo: {
     flexDirection: 'row',

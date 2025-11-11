@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -6,22 +6,72 @@ import {
   ScrollView,
   SafeAreaView,
   TouchableOpacity,
+  Alert,
+  Platform,
 } from 'react-native';
-import { Lock, Star, CheckCircle, X, ArrowLeft } from '../components/icons';
+import { Lock, Star, CheckCircle, X } from '../components/icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
 import { Colors } from '../theme/colors';
 import { Typography, Spacing, BorderRadius, Shadows } from '../theme/styles';
 import { Button, Card, GlassCard, PageTransition, HeroTransition } from '../components';
 import { ScanStackParamList } from '../navigation/types';
+import RazorpayCheckout from 'react-native-razorpay';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '../config/firebase';
+import { useAuth } from '../hooks/useAuth';
+import { useUserProfile } from '../hooks/useUserProfile';
+import { openRazorpayCheckout } from '../utils/razorpayWeb';
 
 type PaywallScreenRouteProp = RouteProp<ScanStackParamList, 'Paywall'>;
+
+const PLAN_IDS = {
+  monthly: 'plan_ReW1PnO4nBRilg',
+  yearly: 'plan_ReWBBDIuNeSvbx',
+} as const;
+
+type PlanType = keyof typeof PLAN_IDS;
+
+const PLAN_DETAILS: Record<PlanType, { label: string; price: number; billingPeriod: string; savingsLabel?: string }> = {
+  monthly: {
+    label: 'Monthly',
+    price: 199,
+    billingPeriod: 'per month',
+  },
+  yearly: {
+    label: 'Yearly',
+    price: 2399,
+    billingPeriod: 'per year',
+  },
+};
+
+const formatCurrency = (amount: number) =>
+  new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(amount);
 
 export const PaywallScreen: React.FC = () => {
   const { colors } = useTheme();
   const navigation = useNavigation();
   const route = useRoute<PaywallScreenRouteProp>();
   const context = route.params?.context || 'scanLimit';
+  const { user } = useAuth();
+  const { profile, isPremiumUser } = useUserProfile();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<PlanType>('monthly');
+
+  const planOptions = useMemo(
+    () =>
+      (Object.keys(PLAN_IDS) as PlanType[]).map((plan) => ({
+        value: plan,
+        label: PLAN_DETAILS[plan].label,
+      })),
+    []
+  );
+
+  const selectedPlanDetails = PLAN_DETAILS[selectedPlan];
 
   const features = [
     {
@@ -56,12 +106,88 @@ export const PaywallScreen: React.FC = () => {
     },
   ];
 
-  const handleUpgrade = () => {
-    // TODO: Implement premium upgrade flow
-    // For now, show a placeholder alert
-    // In production, this would integrate with payment provider
-    console.log('Upgrade to Premium');
-    // You can navigate to a payment screen or show payment modal here
+  const handleSubscribe = async () => {
+    if (isProcessing) {
+      return;
+    }
+
+    if (isPremiumUser) {
+      Alert.alert('Already Premium', 'Your account already has premium access.');
+      return;
+    }
+
+    let createdSubscriptionId: string | null = null;
+
+    try {
+      setIsProcessing(true);
+      const createSubscription = httpsCallable<
+        { planId: string },
+        { subscriptionId: string; keyId: string }
+      >(functions, 'createSubscription');
+      const response = await createSubscription({ planId: PLAN_IDS[selectedPlan] });
+      const data = response.data;
+
+      if (!data?.subscriptionId || !data?.keyId) {
+        throw new Error('Unable to initiate subscription. Please try again.');
+      }
+
+      createdSubscriptionId = data.subscriptionId;
+
+      const options = {
+        key: data.keyId,
+        subscription_id: data.subscriptionId,
+        name: 'Menu Mentor Premium',
+        description: `${selectedPlanDetails.label} plan`,
+        prefill: {
+          email: user?.email ?? profile?.email ?? '',
+          name: user?.displayName ?? profile?.displayName ?? '',
+        },
+        theme: {
+          color: Colors.brand.blue,
+        },
+      };
+
+      if (Platform.OS === 'web') {
+        await openRazorpayCheckout(options);
+      } else {
+        if (typeof RazorpayCheckout?.open !== 'function') {
+          throw new Error('Razorpay is not available on this device. Please reinstall the app.');
+        }
+        await RazorpayCheckout.open(options);
+      }
+
+      Alert.alert(
+        'Success',
+        'Payment successful! Your account will be upgraded shortly once the transaction is confirmed.'
+      );
+      navigation.goBack();
+    } catch (error: any) {
+      console.error('Subscription error:', error);
+
+      if (createdSubscriptionId) {
+        try {
+          const abortSubscriptionCallable = httpsCallable<void, { message: string }>(
+            functions,
+            'abortPendingSubscription'
+          );
+          await abortSubscriptionCallable();
+        } catch (cleanupError) {
+          console.error('Failed to abort pending subscription:', cleanupError);
+        }
+      }
+
+      if (error?.description) {
+        Alert.alert('Payment Failed', `Payment failed: ${error.description}`);
+      } else if (error?.code && error?.message) {
+        Alert.alert('Error', error.message);
+      } else if (error instanceof Error) {
+        Alert.alert('Error', error.message);
+      } else {
+        Alert.alert('Error', 'Something went wrong while processing your payment.');
+      }
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleClose = () => {
@@ -116,6 +242,55 @@ export const PaywallScreen: React.FC = () => {
             </GlassCard>
           </HeroTransition>
 
+          {/* Plan Selector */}
+          <HeroTransition delay={120} duration={400}>
+            <Card style={styles.planSelectorCard} variant="elevated">
+              <View style={[styles.planToggleContainer, { backgroundColor: Colors.brand.blue + '10' }]}>
+                {planOptions.map((option) => {
+                  const isActive = selectedPlan === option.value;
+                  return (
+                    <TouchableOpacity
+                      key={option.value}
+                      onPress={() => setSelectedPlan(option.value)}
+                      style={[
+                        styles.planToggle,
+                        {
+                          backgroundColor: isActive ? Colors.brand.blue : colors.background,
+                          borderColor: Colors.brand.blue,
+                        },
+                      ]}
+                      activeOpacity={0.8}
+                    >
+                      <Text
+                        style={[
+                          styles.planToggleLabel,
+                          { color: isActive ? Colors.white : colors.primaryText },
+                        ]}
+                      >
+                        {option.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              <View style={styles.planDetails}>
+                <Text style={[styles.planPrice, { color: colors.primaryText }]}>
+                  {formatCurrency(selectedPlanDetails.price)}
+                </Text>
+                <Text style={[styles.planBillingPeriod, { color: colors.secondaryText }]}>
+                  {selectedPlanDetails.billingPeriod}
+                </Text>
+                {selectedPlanDetails.savingsLabel ? (
+                  <View style={[styles.planSavingsBadge, { backgroundColor: Colors.brand.blue + '15' }] }>
+                    <Text style={[styles.planSavingsText, { color: Colors.brand.blue }]}>
+                      {selectedPlanDetails.savingsLabel}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            </Card>
+          </HeroTransition>
+
           {/* Features List */}
           <View style={styles.featuresSection}>
             <Text style={[styles.featuresTitle, { color: colors.primaryText }]}>
@@ -145,12 +320,19 @@ export const PaywallScreen: React.FC = () => {
           {/* CTA Section */}
           <View style={styles.ctaSection}>
             <Button
-              title="Upgrade to Premium"
-              onPress={handleUpgrade}
+              title={isPremiumUser ? "You're Premium" : `Upgrade • ${selectedPlanDetails.label}`}
+              onPress={handleSubscribe}
               fullWidth
               style={styles.upgradeButton}
               icon={<Star size={20} color={Colors.white} fill={Colors.white} />}
+              disabled={isPremiumUser}
+              loading={isProcessing}
             />
+            {!isPremiumUser && (
+              <Text style={[styles.planDisclaimer, { color: colors.secondaryText }]}>
+                {`${formatCurrency(selectedPlanDetails.price)} ${selectedPlanDetails.billingPeriod}`}
+              </Text>
+            )}
             <TouchableOpacity onPress={handleClose} style={styles.cancelButton}>
               <Text style={[styles.cancelText, { color: colors.secondaryText }]}>
                 Maybe Later
@@ -269,6 +451,55 @@ const styles = StyleSheet.create({
   },
   cancelText: {
     ...Typography.bodyMedium,
+  },
+  planSelectorCard: {
+    marginBottom: Spacing.xl,
+    padding: Spacing.md,
+    gap: Spacing.md,
+  },
+  planToggleContainer: {
+    flexDirection: 'row',
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.xs,
+    gap: Spacing.xs,
+  },
+  planToggle: {
+    flex: 1,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  planToggleLabel: {
+    ...Typography.buttonSmall,
+    fontWeight: '600',
+  },
+  planDetails: {
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  planPrice: {
+    ...Typography.h2,
+    fontWeight: '700',
+  },
+  planBillingPeriod: {
+    ...Typography.bodyMedium,
+  },
+  planSavingsBadge: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.full,
+  },
+  planSavingsText: {
+    ...Typography.caption,
+    fontWeight: '600',
+  },
+  planDisclaimer: {
+    ...Typography.caption,
+    textAlign: 'center',
+    marginTop: -Spacing.sm,
+    marginBottom: Spacing.sm,
   },
 });
 

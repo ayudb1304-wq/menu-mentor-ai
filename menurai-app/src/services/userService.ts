@@ -10,6 +10,14 @@ import {
 import { db } from '../config/firebase';
 import { User } from 'firebase/auth';
 
+export type SubscriptionStatus =
+  | 'free'
+  | 'pending'
+  | 'active'
+  | 'failed'
+  | 'cancelled'
+  | 'pending_cancel';
+
 export interface UserProfile {
   uid: string;
   email: string;
@@ -24,6 +32,10 @@ export interface UserProfile {
   scanCount: number; // Track number of scans for freemium users
   createdAt: Timestamp;
   updatedAt: Timestamp;
+  subscriptionId: string | null;
+  subscriptionStatus: SubscriptionStatus;
+  planId: string | null;
+  validUntil: Timestamp | null;
 }
 
 export const DIETARY_PRESETS = [
@@ -37,6 +49,46 @@ export const DIETARY_PRESETS = [
 ] as const;
 
 class UserService {
+  private isValidSubscriptionStatus(status: any): status is SubscriptionStatus {
+    return ['free', 'pending', 'active', 'failed', 'cancelled', 'pending_cancel'].includes(status);
+  }
+
+  private computeIsPremium(status: SubscriptionStatus, validUntil: Timestamp | null): boolean {
+    if (status !== 'active' || !validUntil) {
+      return false;
+    }
+    return validUntil.toDate().getTime() > Date.now();
+  }
+
+  private normalizeProfileData(data: any): UserProfile {
+    const rawStatus = data?.subscriptionStatus;
+    const subscriptionStatus: SubscriptionStatus = this.isValidSubscriptionStatus(rawStatus)
+      ? rawStatus
+      : 'free';
+
+    const rawValidUntil = data?.validUntil;
+    const validUntil =
+      rawValidUntil && typeof rawValidUntil.toDate === 'function'
+        ? (rawValidUntil as Timestamp)
+        : null;
+
+    const normalized: UserProfile = {
+      ...data,
+      subscriptionId: data?.subscriptionId ?? null,
+      planId: data?.planId ?? null,
+      subscriptionStatus,
+      validUntil,
+      isPremium: this.computeIsPremium(subscriptionStatus, validUntil),
+    };
+
+    return normalized;
+  }
+
+  private isPremiumUser(profile: UserProfile | null): boolean {
+    if (!profile) return false;
+    return this.computeIsPremium(profile.subscriptionStatus, profile.validUntil);
+  }
+
   /**
    * Get user profile from Firestore
    */
@@ -44,7 +96,7 @@ class UserService {
     try {
       const userDoc = await getDoc(doc(db, 'users', uid));
       if (userDoc.exists()) {
-        return userDoc.data() as UserProfile;
+        return this.normalizeProfileData(userDoc.data());
       }
       return null;
     } catch (error) {
@@ -70,7 +122,11 @@ class UserService {
           updatedAt: serverTimestamp(),
         };
         await updateDoc(userRef, updates);
-        return { ...existingProfile, ...updates } as UserProfile;
+        const refreshedProfile = await this.getUserProfile(user.uid);
+        if (!refreshedProfile) {
+          throw new Error('Failed to refresh user profile after update');
+        }
+        return refreshedProfile;
       } else {
         // Create new profile
         const newProfile: Partial<UserProfile> = {
@@ -87,9 +143,17 @@ class UserService {
           scanCount: 0, // New users start with 0 scans
           createdAt: serverTimestamp() as Timestamp,
           updatedAt: serverTimestamp() as Timestamp,
+          subscriptionId: null,
+          subscriptionStatus: 'free',
+          planId: null,
+          validUntil: null,
         };
         await setDoc(userRef, newProfile);
-        return newProfile as UserProfile;
+        const createdProfile = await this.getUserProfile(user.uid);
+        if (!createdProfile) {
+          throw new Error('Failed to load user profile after creation');
+        }
+        return createdProfile;
       }
     } catch (error) {
       console.error('Error creating/updating user profile:', error);
@@ -187,7 +251,7 @@ class UserService {
    */
   canScan(profile: UserProfile | null): boolean {
     if (!profile) return false;
-    if (profile.isPremium) return true; // Premium users have unlimited scans
+    if (this.isPremiumUser(profile)) return true; // Premium users have unlimited scans
     const currentCount = profile.scanCount ?? 0; // Default to 0 if undefined
     return currentCount < 5; // Free users limited to 5 scans
   }
@@ -197,7 +261,7 @@ class UserService {
    */
   getRemainingScans(profile: UserProfile | null): number {
     if (!profile) return 0;
-    if (profile.isPremium) return -1; // -1 means unlimited
+    if (this.isPremiumUser(profile)) return -1; // -1 means unlimited
     const currentCount = profile.scanCount ?? 0; // Default to 0 if undefined
     return Math.max(0, 5 - currentCount);
   }
@@ -215,7 +279,7 @@ class UserService {
       }
 
       // Only increment if user is not premium
-      if (!profile.isPremium) {
+      if (!this.isPremiumUser(profile)) {
         const currentCount = profile.scanCount ?? 0; // Default to 0 if undefined
         await updateDoc(userRef, {
           scanCount: currentCount + 1,
@@ -237,7 +301,7 @@ class UserService {
       userRef,
       (doc) => {
         if (doc.exists()) {
-          callback(doc.data() as UserProfile);
+          callback(this.normalizeProfileData(doc.data()));
         } else {
           callback(null);
         }
