@@ -8,6 +8,7 @@ import {
   Image,
   TouchableOpacity,
   Alert,
+  Platform,
 } from 'react-native';
 import { Utensils, Edit2, Lock, Info, HelpCircle, ChevronRight, User, Plus, Star } from '../components/icons';
 import { useTheme } from '../theme/ThemeContext';
@@ -19,9 +20,8 @@ import { useUserProfile } from '../hooks/useUserProfile';
 import { useNavigation } from '@react-navigation/native';
 import Constants from 'expo-constants';
 import { format } from 'date-fns';
-import { getFunctions } from 'firebase/functions';
 import { functions } from '../config/firebase';
-const CANCEL_SUBSCRIPTION_URL = 'https://cancelsubscription-zlvprr7dyq-uc.a.run.app';
+import { httpsCallable } from 'firebase/functions';
 
 
 const PLAN_LABELS: Record<string, string> = {
@@ -34,8 +34,8 @@ const SUBSCRIPTION_STATUS_LABELS: Record<string, string> = {
   pending: 'Pending Activation',
   active: 'Active',
   failed: 'Payment Failed',
-  cancelled: 'Cancelled',
-  pending_cancel: 'Cancellation Pending',
+  cancelled: 'Subscription Cancelled',
+  pending_cancel: 'Subscription Cancelled',
 };
 
 export const ProfileScreen: React.FC = () => {
@@ -82,6 +82,14 @@ export const ProfileScreen: React.FC = () => {
     }
   };
 
+  const showAlert = (title: string, message: string) => {
+    if (Platform.OS === 'web') {
+      window.alert(`${title}\n\n${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
+
   const requestSubscriptionCancellation = async () => {
     try {
       setCancelLoading(true);
@@ -89,40 +97,24 @@ export const ProfileScreen: React.FC = () => {
         throw new Error('You must be signed in to cancel your subscription.');
       }
 
-      const idToken = await user.getIdToken();
+      const cancelSubscriptionCallable = httpsCallable<
+        void,
+        { message?: string }
+      >(functions, 'cancelSubscription');
+      const result = await cancelSubscriptionCallable();
 
-      const response = await fetch(CANCEL_SUBSCRIPTION_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${idToken}`,
-        },
-        body: JSON.stringify({}),
-      });
+      const message =
+        result?.data?.message ??
+        'Your subscription will end at the close of the current billing period.';
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Unable to cancel subscription. Please try again later.');
-      }
-
-      let message = 'Your subscription will end at the close of the current billing period.';
-      try {
-        const result = await response.json();
-        if (result?.message) {
-          message = result.message;
-        }
-      } catch (parseError) {
-        console.warn('Failed to parse cancel subscription response:', parseError);
-      }
-
-      Alert.alert('Cancellation Requested', message);
+      showAlert('Cancellation Requested', message);
     } catch (error: any) {
       console.error('Cancel subscription error:', error);
-      const message =
-        (error?.message as string) ||
-        (error?.details as string) ||
+      const errorMessage =
+        (error?.message as string) ??
+        (error?.details as string) ??
         'Unable to cancel subscription. Please try again later.';
-      Alert.alert('Error', message);
+      showAlert('Error', errorMessage);
     } finally {
       setCancelLoading(false);
     }
@@ -132,6 +124,16 @@ export const ProfileScreen: React.FC = () => {
     const message = validUntilText
       ? `Your premium access will continue until ${validUntilText}. Do you want to cancel your subscription?`
       : 'Your premium access will remain active until the end of the current billing cycle. Do you want to cancel your subscription?';
+
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(
+        `${message}\n\nSelect OK to cancel at the end of the current billing period.`
+      );
+      if (confirmed) {
+        void requestSubscriptionCancellation();
+      }
+      return;
+    }
 
     Alert.alert('Cancel Subscription', message, [
       { text: 'Keep Subscription', style: 'cancel' },
@@ -234,6 +236,13 @@ export const ProfileScreen: React.FC = () => {
           {subscriptionStatus === 'cancelled' && validUntilText && (
             <Text style={[styles.subscriptionMessage, { color: colors.secondaryText }]}>
               Premium access ended on {validUntilText}. Upgrade again to regain full access.
+            </Text>
+          )}
+          {subscriptionStatus === 'pending_cancel' && (
+            <Text style={[styles.subscriptionMessage, { color: colors.secondaryText }]}>
+              {validUntilText
+                ? `Your subscription remains active until ${validUntilText}. Premium access will end afterwards.`
+                : 'Your subscription will remain active until the current billing period ends.'}
             </Text>
           )}
 
