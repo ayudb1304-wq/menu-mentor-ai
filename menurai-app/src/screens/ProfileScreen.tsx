@@ -10,7 +10,18 @@ import {
   Alert,
   Platform,
 } from 'react-native';
-import { Utensils, Edit2, Lock, Info, HelpCircle, ChevronRight, User, Plus, Star } from '../components/icons';
+import {
+  Utensils,
+  Edit2,
+  Lock,
+  Info,
+  HelpCircle,
+  ChevronRight,
+  User,
+  Plus,
+  Star,
+  AlertCircle,
+} from '../components/icons';
 import { useTheme } from '../theme/ThemeContext';
 import { Colors } from '../theme/colors';
 import { Typography, Spacing, BorderRadius } from '../theme/styles';
@@ -335,11 +346,14 @@ export const ProfileScreen: React.FC = () => {
 
         {/* Settings Section */}
         <Card style={styles.section}>
-          <TouchableOpacity style={styles.settingRow}>
+          <TouchableOpacity
+            style={styles.settingRow}
+            onPress={() => navigation.navigate('ContactSupport')}
+          >
             <View style={styles.settingLeft}>
               <HelpCircle size={24} color={colors.secondaryText} />
               <Text style={[styles.settingText, { color: colors.primaryText }]}>
-                Help & Support
+                Contact Support
               </Text>
             </View>
             <ChevronRight size={20} color={colors.secondaryText} />
@@ -347,11 +361,44 @@ export const ProfileScreen: React.FC = () => {
 
           <View style={styles.separator} />
 
-          <TouchableOpacity style={styles.settingRow}>
+          <TouchableOpacity
+            style={styles.settingRow}
+            onPress={() => navigation.navigate('Terms')}
+          >
+            <View style={styles.settingLeft}>
+              <Info size={24} color={colors.secondaryText} />
+              <Text style={[styles.settingText, { color: colors.primaryText }]}>
+                Terms & Conditions
+              </Text>
+            </View>
+            <ChevronRight size={20} color={colors.secondaryText} />
+          </TouchableOpacity>
+
+          <View style={styles.separator} />
+
+          <TouchableOpacity
+            style={styles.settingRow}
+            onPress={() => navigation.navigate('PrivacyPolicy')}
+          >
             <View style={styles.settingLeft}>
               <Lock size={24} color={colors.secondaryText} />
               <Text style={[styles.settingText, { color: colors.primaryText }]}>
                 Privacy Policy
+              </Text>
+            </View>
+            <ChevronRight size={20} color={colors.secondaryText} />
+          </TouchableOpacity>
+
+          <View style={styles.separator} />
+
+          <TouchableOpacity
+            style={styles.settingRow}
+            onPress={() => navigation.navigate('CancellationPolicy')}
+          >
+            <View style={styles.settingLeft}>
+              <AlertCircle size={24} color={colors.secondaryText} />
+              <Text style={[styles.settingText, { color: colors.primaryText }]}>
+                Cancellation & Refund
               </Text>
             </View>
             <ChevronRight size={20} color={colors.secondaryText} />

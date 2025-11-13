@@ -2,6 +2,10 @@ export type RootStackParamList = {
   Auth: undefined;
   ProfileSetup: { isEditMode?: boolean };
   Home: undefined;
+  Terms: undefined;
+  PrivacyPolicy: undefined;
+  CancellationPolicy: undefined;
+  ContactSupport: undefined;
 };
 
 export type HomeTabParamList = {

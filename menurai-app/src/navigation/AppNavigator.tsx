@@ -8,6 +8,10 @@ import { AuthScreen } from '../screens/AuthScreen';
 import { ProfileSetupScreen } from '../screens/ProfileSetupScreen';
 import { HomeNavigator } from './HomeNavigator';
 import { AuthWrapper } from '../screens/AuthWrapper';
+import { TermsScreen } from '../screens/TermsScreen';
+import { PrivacyPolicyScreen } from '../screens/PrivacyPolicyScreen';
+import { CancellationPolicyScreen } from '../screens/CancellationPolicyScreen';
+import { ContactSupportScreen } from '../screens/ContactSupportScreen';
 import { RootStackParamList } from './types';
 import { useTheme } from '../theme/ThemeContext';
 import { Colors } from '../theme/colors';
@@ -82,6 +86,34 @@ export const AppNavigator: React.FC = () => {
               />
             </>
           )}
+          <Stack.Screen
+            name="Terms"
+            component={TermsScreen}
+            options={{
+              header: () => <AppHeader title="Terms & Conditions" showBackButton />,
+            }}
+          />
+          <Stack.Screen
+            name="PrivacyPolicy"
+            component={PrivacyPolicyScreen}
+            options={{
+              header: () => <AppHeader title="Privacy Policy" showBackButton />,
+            }}
+          />
+          <Stack.Screen
+            name="CancellationPolicy"
+            component={CancellationPolicyScreen}
+            options={{
+              header: () => <AppHeader title="Cancellation & Refund" showBackButton />,
+            }}
+          />
+          <Stack.Screen
+            name="ContactSupport"
+            component={ContactSupportScreen}
+            options={{
+              header: () => <AppHeader title="Contact Support" showBackButton />,
+            }}
+          />
         </Stack.Navigator>
       </AuthWrapper>
     </NavigationContainer>
