@@ -17,8 +17,25 @@ import * as crypto from "crypto";
 // https://firebase.google.com/docs/functions/typescript
 
 // Initialize BOTH clients outside the function handlers for reuse
-const vertexAI = new VertexAI({project: "menu-mentor-prod", location: "us-central1"});
-const visionClient = new ImageAnnotatorClient();
+let vertexAIClient: VertexAI | null = null;
+let geminiModel: ReturnType<VertexAI["getGenerativeModel"]> | null = null;
+const getGeminiModel = () => {
+  if (!vertexAIClient) {
+    vertexAIClient = new VertexAI({project: "menu-mentor-prod", location: "us-central1"});
+  }
+  if (!geminiModel) {
+    geminiModel = vertexAIClient.getGenerativeModel({model: "gemini-2.5-flash"});
+  }
+  return geminiModel;
+};
+
+let cachedVisionClient: ImageAnnotatorClient | null = null;
+const getVisionClient = () => {
+  if (!cachedVisionClient) {
+    cachedVisionClient = new ImageAnnotatorClient();
+  }
+  return cachedVisionClient;
+};
 
 // Initialize Firebase Admin SDK
 if (!admin.apps.length) {
@@ -27,7 +44,6 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 
 // 180-IQ FIX: Use the stable, powerful reasoning model.
-const model = vertexAI.getGenerativeModel({model: "gemini-2.5-flash"});
 
 setGlobalOptions({maxInstances: 10});
 
@@ -39,7 +55,7 @@ interface SubscriptionUpdate {
   validUntil?: admin.firestore.Timestamp | null;
 }
 
-const ALLOWED_PLAN_IDS = new Set(["plan_ReW1PnO4nBRilg", "plan_ReWBBDIuNeSvbx"]);
+const ALLOWED_PLAN_IDS = new Set(["plan_RfIuMzKNOBsDvv", "plan_RfJKP64ICEoRDU"]);
 
 const razorpayKeyId = defineSecret("RAZORPAY_KEY_ID");
 const razorpayKeySecret = defineSecret("RAZORPAY_KEY_SECRET");
@@ -172,6 +188,7 @@ export const analyzeMenu = onCall({timeoutSeconds: 300}, async (request) => {
   }
 
   try {
+    const visionClient = getVisionClient();
     // ==========================================================
     // STEP 1: OCR (This is our Phase 2 code, now inside the real function)
     // ==========================================================
@@ -238,6 +255,7 @@ Return *nothing* but the single, valid JSON object in this exact format:
     ];
 
     // Call Gemini model
+    const model = getGeminiModel();
     const result = await model.generateContent({
       contents: [{role: "user", parts: [{text: systemPrompt}]}],
       safetySettings,

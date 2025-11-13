@@ -26,8 +26,8 @@ import { openRazorpayCheckout } from '../utils/razorpayWeb';
 type PaywallScreenRouteProp = RouteProp<ScanStackParamList, 'Paywall'>;
 
 const PLAN_IDS = {
-  monthly: 'plan_ReW1PnO4nBRilg',
-  yearly: 'plan_ReWBBDIuNeSvbx',
+  monthly: 'plan_RfIuMzKNOBsDvv',
+  yearly: 'plan_RfJKP64ICEoRDU',
 } as const;
 
 type PlanType = keyof typeof PLAN_IDS;
