@@ -138,7 +138,7 @@ export const ProfileSetupScreen: React.FC = () => {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.container }]}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' && Platform.OS !== 'web' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.flex}
         enabled={Platform.OS !== 'web'}
       >
@@ -158,9 +158,9 @@ export const ProfileSetupScreen: React.FC = () => {
 
           {/* Free Edit Notice */}
           {isEditMode && isFreeEdit && (
-            <View style={[styles.freeEditNotice, { backgroundColor: Colors.brand.blue + '20' }]}>
-              <Info size={16} color={Colors.brand.blue} />
-              <Text style={[styles.freeEditText, { color: Colors.brand.blue }]}>
+            <View style={[styles.freeEditNotice, { backgroundColor: Colors.brand.primary + '20' }]}>
+              <Info size={16} color={Colors.brand.primary} />
+              <Text style={[styles.freeEditText, { color: Colors.brand.primary }]}>
                 You're using your one-time free edit. After this, changes will be locked for 30 days.
               </Text>
             </View>

@@ -1,0 +1,12 @@
+{
+  "files": [],
+  "references": [
+    {
+      "path": "./functions"
+    },
+    {
+      "path": "./menurai-app"
+    }
+  ]
+}
+

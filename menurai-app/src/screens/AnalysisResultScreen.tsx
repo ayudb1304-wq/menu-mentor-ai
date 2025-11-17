@@ -7,6 +7,7 @@ import {
   SafeAreaView,
   Image,
   ActivityIndicator,
+  TouchableOpacity,
 } from 'react-native';
 import { Utensils, CheckCircle, Info, XCircle, AlertCircle } from '../components/icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -26,6 +27,7 @@ type FilterCategory = 'all' | 'compliant' | 'modifiable' | 'non_compliant';
 // Menu item result card (reused from AnalysisScreen)
 const MenuItemCard: React.FC<{ item: MenuItem }> = ({ item }) => {
   const { colors } = useTheme();
+  const [isExpanded, setIsExpanded] = React.useState(false);
 
   const getClassificationColor = () => {
     switch (item.classification) {
@@ -66,15 +68,27 @@ const MenuItemCard: React.FC<{ item: MenuItem }> = ({ item }) => {
     }
   };
 
+  // Check if text is likely truncated (rough estimate: more than ~60 chars)
+  const isLongText = item.name.length > 60;
+  const needsExpansion = isLongText && !isExpanded;
+
   return (
     <Card style={styles.menuItemCard} variant="elevated">
       <View style={styles.menuItemHeader}>
-        <View style={styles.menuItemTitleRow}>
+        <TouchableOpacity
+          style={styles.menuItemTitleRow}
+          onPress={() => needsExpansion && setIsExpanded(true)}
+          activeOpacity={needsExpansion ? 0.7 : 1}
+        >
           {getClassificationIcon()}
-          <Text style={[styles.menuItemName, { color: colors.primaryText }]}>
+          <Text
+            style={[styles.menuItemName, { color: colors.primaryText }]}
+            numberOfLines={isExpanded ? undefined : 2}
+            ellipsizeMode="tail"
+          >
             {item.name}
           </Text>
-        </View>
+        </TouchableOpacity>
         <View
           style={[
             styles.classificationBadge,
@@ -86,9 +100,26 @@ const MenuItemCard: React.FC<{ item: MenuItem }> = ({ item }) => {
           </Text>
         </View>
       </View>
-      <Text style={[styles.menuItemReason, { color: colors.secondaryText }]}>
-        {item.reason}
-      </Text>
+      {isExpanded && (
+        <TouchableOpacity
+          onPress={() => setIsExpanded(false)}
+          style={styles.collapseButton}
+        >
+          <Text style={[styles.collapseText, { color: colors.secondaryText }]}>
+            Show less
+          </Text>
+        </TouchableOpacity>
+      )}
+      {item.reason && (
+        <View style={styles.reasonContainer}>
+          <Text 
+            style={[styles.menuItemReason, { color: colors.secondaryText }]}
+            numberOfLines={undefined}
+          >
+            {item.reason}
+          </Text>
+        </View>
+      )}
     </Card>
   );
 };
@@ -158,7 +189,7 @@ export const AnalysisResultScreen: React.FC = () => {
       <PageTransition type="zoomIn" duration={400}>
         <SafeAreaView style={[styles.container, { backgroundColor: colors.container }]}>
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={Colors.brand.blue} />
+            <ActivityIndicator size="large" color={Colors.brand.primary} />
             <Text style={[styles.loadingText, { color: colors.secondaryText }]}>
               Loading scan details...
             </Text>
@@ -227,8 +258,8 @@ export const AnalysisResultScreen: React.FC = () => {
               </Text>
               <View style={styles.dietaryChipsContainer}>
                 {profile.dietaryPresets.map((preset, index) => (
-                  <View key={`preset-${index}`} style={[styles.dietaryChip, { backgroundColor: Colors.brand.blue + '20' }]}>
-                    <Text style={[styles.dietaryChipText, { color: Colors.brand.blue }]}>{preset}</Text>
+                  <View key={`preset-${index}`} style={[styles.dietaryChip, { backgroundColor: Colors.brand.primary + '20' }]}>
+                    <Text style={[styles.dietaryChipText, { color: Colors.brand.primary }]}>{preset}</Text>
                   </View>
                 ))}
                 {profile.customRestrictions.map((restriction, index) => (
@@ -428,6 +459,7 @@ const styles = StyleSheet.create({
   },
   menuItemCard: {
     marginBottom: Spacing.sm,
+    width: '100%',
   },
   menuItemHeader: {
     flexDirection: 'row',
@@ -437,27 +469,43 @@ const styles = StyleSheet.create({
   },
   menuItemTitleRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     flex: 1,
     marginRight: Spacing.sm,
+    minWidth: 0,
   },
   menuItemName: {
     ...Typography.bodyMedium,
     marginLeft: Spacing.xs,
     flex: 1,
+    flexShrink: 1,
   },
   classificationBadge: {
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
     borderRadius: BorderRadius.sm,
+    flexShrink: 0,
+  },
+  collapseButton: {
+    marginTop: Spacing.xs,
+    alignSelf: 'flex-start',
+  },
+  collapseText: {
+    ...Typography.caption,
+    fontWeight: '600' as '600',
   },
   classificationText: {
     ...Typography.caption,
     fontWeight: '600' as '600',
   },
+  reasonContainer: {
+    width: '100%',
+    marginTop: Spacing.xs,
+  },
   menuItemReason: {
     ...Typography.bodySmall,
-    marginTop: Spacing.xs,
+    lineHeight: Typography.bodySmall.fontSize * 1.5,
+    flexShrink: 1,
   },
   dietaryCard: {
     marginHorizontal: Spacing.lg,

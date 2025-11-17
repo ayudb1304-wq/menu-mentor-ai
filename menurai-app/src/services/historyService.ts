@@ -15,6 +15,9 @@ import { db, auth } from '../config/firebase';
 import { AnalysisResult, MenuItem } from './menuAnalysisService';
 import userService from './userService';
 
+const SCAN_ID_PREFIX = 'scan_';
+const SCAN_ID_REGEX = /^scan_\d{5,}$/;
+
 export interface ScanHistory {
   id: string;
   userId: string;
@@ -27,6 +30,24 @@ export interface ScanHistory {
 }
 
 class HistoryService {
+  private generateScanId(): string {
+    return `${SCAN_ID_PREFIX}${Date.now()}`;
+  }
+
+  private isValidScanId(scanId: string): boolean {
+    if (typeof scanId !== 'string') {
+      return false;
+    }
+
+    if (SCAN_ID_REGEX.test(scanId)) {
+      return true;
+    }
+
+    // Allow legacy IDs (non-prefixed) but log a warning for visibility
+    console.warn('Scan ID does not match expected format, continuing anyway:', scanId);
+    return scanId.trim().length > 0;
+  }
+
   /**
    * Save a scan to history
    */
@@ -42,7 +63,11 @@ class HistoryService {
       }
 
       // Generate unique ID
-      const scanId = `scan_${Date.now()}`;
+      const scanId = this.generateScanId();
+      if (!this.isValidScanId(scanId)) {
+        console.error('Generated invalid scan ID, aborting save:', scanId);
+        throw new Error('Invalid scan identifier');
+      }
       const historyRef = doc(db, 'users', user.uid, 'scanHistory', scanId);
 
       // Build scan data object, only including defined fields (Firestore doesn't allow undefined)
@@ -146,19 +171,48 @@ class HistoryService {
   /**
    * Delete a scan from history
    */
-  async deleteScan(scanId: string): Promise<void> {
+  async deleteScan(
+    scanId: string
+  ): Promise<{ success: boolean; message?: string }> {
     try {
       const user = auth.currentUser;
       if (!user) {
-        throw new Error('User not authenticated');
+        console.warn('Attempted to delete scan without authentication');
+        return { success: false, message: 'User not authenticated' };
+      }
+
+      if (!this.isValidScanId(scanId)) {
+        return {
+          success: false,
+          message: 'Invalid scan identifier provided',
+        };
       }
 
       const scanRef = doc(db, 'users', user.uid, 'scanHistory', scanId);
+      const scanDoc = await getDoc(scanRef);
+
+      if (!scanDoc.exists()) {
+        console.warn('Attempted to delete non-existent scan:', scanId);
+        return { success: false, message: 'Scan not found' };
+      }
+
       await deleteDoc(scanRef);
       console.log('Scan deleted from history:', scanId);
-    } catch (error) {
+      return { success: true };
+    } catch (error: any) {
       console.error('Error deleting scan from history:', error);
-      throw new Error('Failed to delete scan from history');
+
+      if (error.code === 'permission-denied' || error.code === 'permissions-denied') {
+        return {
+          success: false,
+          message: 'Permission denied. Please check your account access.',
+        };
+      }
+
+      return {
+        success: false,
+        message: 'Failed to delete scan from history',
+      };
     }
   }
 

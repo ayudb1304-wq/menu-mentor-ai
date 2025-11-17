@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,9 +6,11 @@ import {
   FlatList,
   SafeAreaView,
   TouchableOpacity,
+  Pressable,
   Image,
-  RefreshControl,
+  ActivityIndicator,
   Alert,
+  Modal,
 } from 'react-native';
 import { CheckCircle, Info, XCircle, Trash2, Share2, History as HistoryIcon, Lock } from '../components/icons';
 import { format } from 'date-fns';
@@ -35,6 +37,9 @@ export const HistoryScreen: React.FC = () => {
   const [history, setHistory] = useState<ScanHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [deletingIds, setDeletingIds] = useState<Record<string, boolean>>({});
+  const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
+  const [scanToDelete, setScanToDelete] = useState<string | null>(null);
   
   const isPremium = isPremiumUser;
   const FREE_SCAN_LIMIT = 3;
@@ -65,27 +70,74 @@ export const HistoryScreen: React.FC = () => {
     loadHistory();
   };
 
+  const setDeletingState = (scanId: string, value: boolean) => {
+    setDeletingIds((prev) => {
+      const updated = { ...prev };
+      if (value) {
+        updated[scanId] = true;
+      } else {
+        delete updated[scanId];
+      }
+      return updated;
+    });
+  };
+
   const handleDeleteScan = (scanId: string) => {
-    Alert.alert(
-      'Delete Scan',
-      'Are you sure you want to delete this scan from history?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await historyService.deleteScan(scanId);
-              setHistory((prev) => prev.filter((scan) => scan.id !== scanId));
-            } catch (error) {
-              console.error('Error deleting scan:', error);
-              Alert.alert('Error', 'Failed to delete scan');
-            }
-          },
-        },
-      ]
-    );
+    console.log('handleDeleteScan called with scanId:', scanId);
+    
+    if (deletingIds[scanId]) {
+      console.log('Scan is already being deleted, ignoring request');
+      return;
+    }
+
+    // Show confirmation modal
+    setScanToDelete(scanId);
+    setDeleteConfirmVisible(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!scanToDelete) return;
+
+    const scanId = scanToDelete;
+    console.log('Delete confirmed, starting deletion process for:', scanId);
+    
+    setDeleteConfirmVisible(false);
+    const previousHistory = [...history];
+    setDeletingState(scanId, true);
+    setHistory((prev) => prev.filter((scan) => scan.id !== scanId));
+    setScanToDelete(null);
+
+    try {
+      console.log('Calling historyService.deleteScan with:', scanId);
+      const result = await historyService.deleteScan(scanId);
+      console.log('Delete result:', result);
+
+      if (!result.success) {
+        console.warn('Delete failed:', result.message);
+        setHistory(previousHistory);
+        Alert.alert(
+          'Unable to Delete Scan',
+          result.message || 'Failed to delete scan. Please try again.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      // Success - item already removed from UI via optimistic update
+      console.log('Scan successfully deleted:', scanId);
+    } catch (error: any) {
+      console.error('Error deleting scan:', error);
+      setHistory(previousHistory);
+      const errorMessage = error?.message || 'Failed to delete scan. Please try again.';
+      Alert.alert('Error', errorMessage, [{ text: 'OK' }]);
+    } finally {
+      setDeletingState(scanId, false);
+    }
+  };
+
+  const cancelDelete = () => {
+    setDeleteConfirmVisible(false);
+    setScanToDelete(null);
   };
 
   const getCategoryCounts = (items: any[]) => {
@@ -128,18 +180,24 @@ export const HistoryScreen: React.FC = () => {
     const scanDate = item.scanDate?.toDate ? item.scanDate.toDate() : new Date();
     const isBlurred = !isPremium && index >= FREE_SCAN_LIMIT;
 
+    const isDeleting = !!deletingIds[item.id];
+
     return (
       <HeroTransition delay={index * 50} duration={400}>
         <SwipeableCard
           leftAction={{
             icon: 'trash-2',
             color: Colors.semantic.nonCompliant,
-            onPress: () => handleDeleteScan(item.id),
+            onPress: () => {
+              if (!isDeleting) {
+                handleDeleteScan(item.id);
+              }
+            },
             label: 'Delete',
           }}
           rightAction={{
             icon: 'share-2',
-            color: Colors.brand.blue,
+            color: Colors.brand.primary,
             onPress: () => {
               if (isBlurred) {
                 Alert.alert('Premium Required', 'Upgrade to Premium to share scans.');
@@ -154,7 +212,12 @@ export const HistoryScreen: React.FC = () => {
             style={styles.scanCard}
             variant="elevated"
             pressable
-            onPress={() => handleScanPress(item.id, isBlurred)}
+            onPress={() => {
+              // Only navigate if not deleting
+              if (!isDeleting) {
+                handleScanPress(item.id, isBlurred);
+              }
+            }}
           >
             <View style={styles.scanHeader}>
               <View style={styles.scanInfo}>
@@ -167,9 +230,31 @@ export const HistoryScreen: React.FC = () => {
                   </Text>
                 )}
               </View>
-              <TouchableOpacity onPress={() => handleDeleteScan(item.id)}>
-                <Trash2 size={20} color={colors.secondaryText} />
-              </TouchableOpacity>
+              <View
+                onStartShouldSetResponder={() => true}
+                onResponderTerminationRequest={() => false}
+              >
+                <Pressable
+                  onPress={() => {
+                    console.log('Trash button pressed for scanId:', item.id);
+                    handleDeleteScan(item.id);
+                  }}
+                  disabled={isDeleting}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  style={({ pressed }) => [
+                    {
+                      padding: 4,
+                      opacity: isDeleting ? 0.6 : pressed ? 0.7 : 1,
+                    },
+                  ]}
+                >
+                  {isDeleting ? (
+                    <ActivityIndicator size="small" color={colors.secondaryText} />
+                  ) : (
+                    <Trash2 size={20} color={colors.secondaryText} />
+                  )}
+                </Pressable>
+              </View>
             </View>
 
             <View style={styles.scanStats}>
@@ -269,6 +354,51 @@ export const HistoryScreen: React.FC = () => {
           }
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        visible={deleteConfirmVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={cancelDelete}
+      >
+        <Pressable 
+          style={styles.modalOverlay}
+          onPress={cancelDelete}
+        >
+          <Pressable 
+            style={[styles.modalContent, { backgroundColor: colors.card }]}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View style={styles.modalHeader}>
+              <Trash2 size={24} color={Colors.semantic.nonCompliant} />
+              <Text style={[styles.modalTitle, { color: colors.primaryText }]}>
+                Delete Scan?
+              </Text>
+            </View>
+            
+            <Text style={[styles.modalMessage, { color: colors.secondaryText }]}>
+              Are you sure you want to delete this scan from your history? This action cannot be undone.
+            </Text>
+
+            <View style={styles.modalButtons}>
+              <Button
+                title="Cancel"
+                variant="outline"
+                onPress={cancelDelete}
+                style={styles.modalButton}
+              />
+              <TouchableOpacity
+                style={[styles.modalButton, styles.deleteButton]}
+                onPress={confirmDelete}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.deleteButtonText}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
     </PageTransition>
   );
@@ -383,5 +513,54 @@ const styles = StyleSheet.create({
   emptyText: {
     ...Typography.body,
     textAlign: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.lg,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.xl,
+    ...Shadows.lg,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+    gap: Spacing.sm,
+  },
+  modalTitle: {
+    ...Typography.h4,
+    flex: 1,
+  },
+  modalMessage: {
+    ...Typography.body,
+    marginBottom: Spacing.xl,
+    lineHeight: 22,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+  },
+  modalButton: {
+    flex: 1,
+  },
+  deleteButton: {
+    backgroundColor: Colors.semantic.nonCompliant,
+    borderRadius: BorderRadius.md,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteButtonText: {
+    ...Typography.button,
+    color: Colors.white,
+    fontWeight: '600',
   },
 });

@@ -262,19 +262,19 @@ export const ScanOptionsScreen: React.FC = () => {
               Tips for Best Results
             </Text>
             <View style={styles.tipRow}>
-              <CheckCircle size={16} color={Colors.brand.green} />
+              <CheckCircle size={16} color={Colors.semantic.compliant} />
               <Text style={[styles.tipText, { color: colors.secondaryText }]}>
                 Ensure good lighting for clear text
               </Text>
             </View>
             <View style={styles.tipRow}>
-              <CheckCircle size={16} color={Colors.brand.green} />
+              <CheckCircle size={16} color={Colors.semantic.compliant} />
               <Text style={[styles.tipText, { color: colors.secondaryText }]}>
                 Capture the entire menu section
               </Text>
             </View>
             <View style={styles.tipRow}>
-              <CheckCircle size={16} color={Colors.brand.green} />
+              <CheckCircle size={16} color={Colors.semantic.compliant} />
               <Text style={[styles.tipText, { color: colors.secondaryText }]}>
                 Avoid blurry or angled photos
               </Text>
@@ -384,7 +384,7 @@ export const ScanOptionsScreen: React.FC = () => {
                 onPress={handleTakePhoto}
               />
               <OptionCard
-                icon={<ImageIcon size={32} color={Colors.brand.green} />}
+                icon={<ImageIcon size={32} color={Colors.semantic.compliant} />}
                 title="Choose from Gallery"
                 description="Select an existing menu photo"
                 onPress={handleSelectFromGallery}
