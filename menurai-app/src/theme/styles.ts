@@ -1,5 +1,6 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Platform } from 'react-native';
 import { FlexDirection, AlignItems, JustifyContent, FontWeight } from './styleTypes';
+import { FontFamily, FontSize, LineHeight, LetterSpacing, FontWeight as FontWeights } from './fonts';
 
 /**
  * Common spacing values following an 8px grid system
@@ -14,108 +15,170 @@ export const Spacing = {
 } as const;
 
 /**
- * Common border radius values
+ * Common border radius values - Modern, rounded design
  */
 export const BorderRadius = {
-  sm: 4,
-  md: 8,
-  lg: 12,
-  xl: 16,
+  sm: 6,
+  md: 10,
+  lg: 14,
+  xl: 18,
+  '2xl': 24,
   full: 9999,
 } as const;
 
 /**
- * Typography styles
+ * Modern Typography styles with Inter font
+ * Optimized for readability and modern aesthetics
  */
 export const Typography = StyleSheet.create({
-  // Headings
+  // Display - Large, impactful headings
+  display: {
+    fontSize: FontSize['5xl'],
+    fontWeight: FontWeights.bold,
+    lineHeight: FontSize['5xl'] * LineHeight.tight,
+    fontFamily: FontFamily.primary,
+    letterSpacing: LetterSpacing.tight,
+  },
+  
+  // Headings - Modern hierarchy
   h1: {
-    fontSize: 32,
-    fontWeight: '700' as '700',
-    lineHeight: 40,
-    // fontFamily: 'Inter-Bold', // Uncomment when fonts are loaded
+    fontSize: FontSize['4xl'],
+    fontWeight: FontWeights.bold,
+    lineHeight: FontSize['4xl'] * LineHeight.tight,
+    fontFamily: FontFamily.primary,
+    letterSpacing: LetterSpacing.tight,
   },
   h2: {
-    fontSize: 28,
-    fontWeight: '600' as '600',
-    lineHeight: 36,
-    // fontFamily: 'Inter-SemiBold',
+    fontSize: FontSize['3xl'],
+    fontWeight: FontWeights.bold,
+    lineHeight: FontSize['3xl'] * LineHeight.snug,
+    fontFamily: FontFamily.primary,
+    letterSpacing: LetterSpacing.normal,
   },
   h3: {
-    fontSize: 24,
-    fontWeight: '600' as '600',
-    lineHeight: 32,
-    // fontFamily: 'Inter-SemiBold',
+    fontSize: FontSize['2xl'],
+    fontWeight: FontWeights.semiBold,
+    lineHeight: FontSize['2xl'] * LineHeight.snug,
+    fontFamily: FontFamily.primary,
+    letterSpacing: LetterSpacing.normal,
   },
   h4: {
-    fontSize: 20,
-    fontWeight: '600' as '600',
-    lineHeight: 28,
-    // fontFamily: 'Inter-SemiBold',
+    fontSize: FontSize.xl,
+    fontWeight: FontWeights.semiBold,
+    lineHeight: FontSize.xl * LineHeight.normal,
+    fontFamily: FontFamily.primary,
+    letterSpacing: LetterSpacing.normal,
   },
   h5: {
-    fontSize: 18,
-    fontWeight: '500' as '500',
-    lineHeight: 24,
-    // fontFamily: 'Inter-Medium',
+    fontSize: FontSize.lg,
+    fontWeight: FontWeights.semiBold,
+    lineHeight: FontSize.lg * LineHeight.normal,
+    fontFamily: FontFamily.primary,
+    letterSpacing: LetterSpacing.normal,
+  },
+  h6: {
+    fontSize: FontSize.base,
+    fontWeight: FontWeights.semiBold,
+    lineHeight: FontSize.base * LineHeight.normal,
+    fontFamily: FontFamily.primary,
+    letterSpacing: LetterSpacing.wide,
   },
 
-  // Body text
+  // Body text - Optimized for reading
   body: {
-    fontSize: 16,
-    fontWeight: '400' as '400',
-    lineHeight: 24,
-    // fontFamily: 'Inter-Regular',
+    fontSize: FontSize.base,
+    fontWeight: FontWeights.regular,
+    lineHeight: FontSize.base * LineHeight.relaxed,
+    fontFamily: FontFamily.primary,
+    letterSpacing: LetterSpacing.normal,
   },
   bodyMedium: {
-    fontSize: 16,
-    fontWeight: '500' as '500',
-    lineHeight: 24,
-    // fontFamily: 'Inter-Medium',
+    fontSize: FontSize.base,
+    fontWeight: FontWeights.medium,
+    lineHeight: FontSize.base * LineHeight.relaxed,
+    fontFamily: FontFamily.primary,
+    letterSpacing: LetterSpacing.normal,
   },
   bodySmall: {
-    fontSize: 14,
-    fontWeight: '400' as '400',
-    lineHeight: 20,
-    // fontFamily: 'Inter-Regular',
+    fontSize: FontSize.sm,
+    fontWeight: FontWeights.regular,
+    lineHeight: FontSize.sm * LineHeight.relaxed,
+    fontFamily: FontFamily.primary,
+    letterSpacing: LetterSpacing.normal,
+  },
+  bodyLarge: {
+    fontSize: FontSize.lg,
+    fontWeight: FontWeights.regular,
+    lineHeight: FontSize.lg * LineHeight.relaxed,
+    fontFamily: FontFamily.primary,
+    letterSpacing: LetterSpacing.normal,
   },
 
   // Other text styles
   caption: {
-    fontSize: 12,
-    fontWeight: '400' as '400',
-    lineHeight: 16,
-    // fontFamily: 'Inter-Regular',
+    fontSize: FontSize.xs,
+    fontWeight: FontWeights.regular,
+    lineHeight: FontSize.xs * LineHeight.normal,
+    fontFamily: FontFamily.primary,
+    letterSpacing: LetterSpacing.wide,
   },
+  captionMedium: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeights.medium,
+    lineHeight: FontSize.xs * LineHeight.normal,
+    fontFamily: FontFamily.primary,
+    letterSpacing: LetterSpacing.wide,
+  },
+  overline: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeights.semiBold,
+    lineHeight: FontSize.xs * LineHeight.normal,
+    fontFamily: FontFamily.primary,
+    letterSpacing: LetterSpacing.widest,
+    textTransform: 'uppercase' as const,
+  },
+  
+  // Button text
   button: {
-    fontSize: 16,
-    fontWeight: '600' as '600',
-    lineHeight: 24,
-    // fontFamily: 'Inter-SemiBold',
+    fontSize: FontSize.base,
+    fontWeight: FontWeights.semiBold,
+    lineHeight: FontSize.base * LineHeight.normal,
+    fontFamily: FontFamily.primary,
+    letterSpacing: LetterSpacing.wide,
   },
   buttonSmall: {
-    fontSize: 14,
-    fontWeight: '600' as '600',
-    lineHeight: 20,
-    // fontFamily: 'Inter-SemiBold',
+    fontSize: FontSize.sm,
+    fontWeight: FontWeights.semiBold,
+    lineHeight: FontSize.sm * LineHeight.normal,
+    fontFamily: FontFamily.primary,
+    letterSpacing: LetterSpacing.wide,
+  },
+  buttonLarge: {
+    fontSize: FontSize.lg,
+    fontWeight: FontWeights.semiBold,
+    lineHeight: FontSize.lg * LineHeight.normal,
+    fontFamily: FontFamily.primary,
+    letterSpacing: LetterSpacing.wide,
   },
 });
 
 /**
- * Tab Bar Typography styles
+ * Tab Bar Typography styles - Modern styling
  */
 export const TabBarStyles = StyleSheet.create({
   tabLabel: {
-    fontSize: 12,
-    fontWeight: '600' as '600',
-    lineHeight: 16,
-    letterSpacing: 0.3,
+    fontSize: FontSize.xs,
+    fontWeight: FontWeights.medium,
+    lineHeight: FontSize.xs * LineHeight.normal,
+    letterSpacing: LetterSpacing.wide,
+    fontFamily: FontFamily.primary,
   },
   tabLabelActive: {
-    fontSize: 12,
-    fontWeight: '700' as '700',
-    lineHeight: 16,
-    letterSpacing: 0.3,
+    fontSize: FontSize.xs,
+    fontWeight: FontWeights.semiBold,
+    lineHeight: FontSize.xs * LineHeight.normal,
+    letterSpacing: LetterSpacing.wide,
+    fontFamily: FontFamily.primary,
   },
 });
 

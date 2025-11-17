@@ -45,8 +45,8 @@ export const EnhancedRefresh: React.FC<EnhancedRefreshProps> = ({
     <RefreshControl
       refreshing={refreshing}
       onRefresh={onRefresh}
-      colors={[Colors.brand.blue, Colors.brand.blueLight]}
-      tintColor={Colors.brand.blue}
+      colors={Colors.gradients.primary}
+      tintColor={Colors.brand.primary}
       progressBackgroundColor={Colors.white}
       {...props}
     />
@@ -97,7 +97,7 @@ export const CustomRefreshIndicator: React.FC<CustomRefreshIndicatorProps> = ({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: Colors.brand.blue,
+        backgroundColor: Colors.brand.primary,
         justifyContent: 'center',
         alignItems: 'center',
         transform: [

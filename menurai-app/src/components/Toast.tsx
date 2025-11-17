@@ -104,7 +104,7 @@ export const Toast: React.FC<ToastProps> = ({
         };
       default:
         return {
-          backgroundColor: Colors.brand.blue,
+          backgroundColor: Colors.brand.primary,
           icon: Info,
           iconColor: Colors.white,
         };

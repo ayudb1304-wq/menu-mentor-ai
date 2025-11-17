@@ -86,7 +86,7 @@ export const Card: React.FC<CardProps> = ({
     if (variant === 'elevated') {
       return {
         ...baseStyle,
-        shadowColor: '#007BFF',
+        shadowColor: Colors.brand.primary,
         shadowOffset: {
           width: 0,
           height: 4,

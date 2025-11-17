@@ -230,7 +230,7 @@ export const AnalysisScreen: React.FC = () => {
           </View>
           <View style={styles.loadingContainer}>
             <View style={styles.loadingContent}>
-              <Utensils size={48} color={Colors.brand.blue} />
+              <Utensils size={48} color={Colors.brand.primary} />
               <LoadingText />
               <Text style={[styles.loadingHint, { color: colors.secondaryText }]}>
                 This may take up to 30 seconds

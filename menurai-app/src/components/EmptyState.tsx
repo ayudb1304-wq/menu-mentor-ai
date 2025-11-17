@@ -87,7 +87,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         style={[
           styles.iconContainer,
           {
-            backgroundColor: Colors.brand.blue + '15',
+            backgroundColor: Colors.brand.primary + '15',
             transform: [
               { translateY: floatAnim },
               { scale: scaleAnim },
@@ -98,7 +98,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         <IconComponent
           name={icon as any}
           size={64}
-          color={Colors.brand.blue}
+          color={Colors.brand.primary}
         />
       </Animated.View>
 

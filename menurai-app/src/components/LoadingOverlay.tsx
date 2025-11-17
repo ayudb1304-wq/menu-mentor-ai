@@ -23,7 +23,7 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
   const content = (
     <View style={styles.container}>
       <View style={[styles.loadingBox, { backgroundColor: colors.card }]}>
-        <ActivityIndicator size="large" color={Colors.brand.blue} />
+        <ActivityIndicator size="large" color={Colors.brand.primary} />
         {message && (
           <Text style={[styles.message, { color: colors.primaryText }]}>
             {message}
