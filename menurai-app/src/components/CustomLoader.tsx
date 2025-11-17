@@ -14,7 +14,7 @@ interface PulseLoaderProps {
  */
 export const PulseLoader: React.FC<PulseLoaderProps> = ({
   size = 60,
-  color = Colors.brand.blue,
+  color = Colors.brand.primary,
   style,
 }) => {
   const pulse1 = useRef(new Animated.Value(0)).current;
@@ -126,7 +126,7 @@ interface DotsLoaderProps {
  * Three bouncing dots loader
  */
 export const DotsLoader: React.FC<DotsLoaderProps> = ({
-  color = Colors.brand.blue,
+  color = Colors.brand.primary,
   style,
 }) => {
   const dot1 = useRef(new Animated.Value(0)).current;

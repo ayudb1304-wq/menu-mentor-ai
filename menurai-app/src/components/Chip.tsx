@@ -29,9 +29,9 @@ export const Chip: React.FC<ChipProps> = ({
       backgroundColor: selected
         ? variant === 'input'
           ? colors.primaryText
-          : Colors.brand.blue
+          : Colors.brand.primary
         : Colors.transparent,
-      borderColor: selected ? Colors.brand.blue : colors.border,
+      borderColor: selected ? Colors.brand.primary : colors.border,
       opacity: disabled ? 0.5 : 1,
     },
   ];

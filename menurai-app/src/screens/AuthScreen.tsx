@@ -153,7 +153,7 @@ export const AuthScreen: React.FC = () => {
               <Text style={styles.subheadline}>Stop guessing. Start enjoying.</Text>
 
               <TouchableOpacity
-                style={[styles.primaryButton, { backgroundColor: Colors.brand.blue }]}
+                style={[styles.primaryButton, { backgroundColor: Colors.brand.primary }]}
                 activeOpacity={0.85}
                 onPress={handleShowDemo}
                 disabled={isSigningIn || loading}

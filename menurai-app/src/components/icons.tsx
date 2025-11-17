@@ -80,3 +80,4 @@ export const Star = createIcon('Star');
 export const HelpCircle = createIcon('HelpCircle');
 export const Lock = createIcon('Lock');
 export const LockKeyhole = createIcon('LockKeyhole');
+export const WifiOff = createIcon('WifiOff');

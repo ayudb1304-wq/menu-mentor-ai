@@ -111,9 +111,9 @@ export const Button: React.FC<ButtonProps> = ({
   const getGradientColors = (): [string, string] => {
     switch (variant) {
       case 'primary':
-        return ['#0066FF', '#00B4D8'];
+        return Colors.gradients.primary;
       case 'secondary':
-        return ['#38A169', '#68D391'];
+        return Colors.gradients.secondary;
       default:
         return [Colors.transparent, Colors.transparent];
     }
@@ -153,7 +153,7 @@ export const Button: React.FC<ButtonProps> = ({
       case 'outline':
         baseStyle.backgroundColor = Colors.transparent;
         baseStyle.borderWidth = 2;
-        baseStyle.borderColor = Colors.brand.blue;
+        baseStyle.borderColor = Colors.brand.primary;
         break;
       case 'ghost':
         baseStyle.backgroundColor = colors.background;
@@ -176,13 +176,13 @@ export const Button: React.FC<ButtonProps> = ({
 
     // Add shadow for primary and secondary variants
     if ((variant === 'primary' || variant === 'secondary') && !disabled) {
-      containerStyle.shadowColor = variant === 'primary' ? '#0066FF' : '#38A169';
+      containerStyle.shadowColor = variant === 'primary' ? Colors.brand.primary : Colors.brand.secondary;
       containerStyle.shadowOffset = {
         width: 0,
         height: 4,
       };
-      containerStyle.shadowOpacity = 0.3;
-      containerStyle.shadowRadius = 8;
+      containerStyle.shadowOpacity = 0.25;
+      containerStyle.shadowRadius = 12;
       containerStyle.elevation = 8;
     }
 
@@ -211,7 +211,7 @@ export const Button: React.FC<ButtonProps> = ({
         baseStyle.color = Colors.white;
         break;
       case 'outline':
-        baseStyle.color = Colors.brand.blue;
+        baseStyle.color = Colors.brand.primary;
         break;
       case 'ghost':
         baseStyle.color = colors.primaryText;
@@ -261,6 +261,10 @@ export const Button: React.FC<ButtonProps> = ({
           activeOpacity={0.9}
           onPressIn={handlePressIn}
           onPressOut={handlePressOut}
+          accessibilityRole="button"
+          accessibilityLabel={props.accessibilityLabel || title}
+          accessibilityState={{ disabled: disabled || loading }}
+          accessibilityHint={props.accessibilityHint}
           {...props}
         >
           <GradientView
@@ -284,6 +288,10 @@ export const Button: React.FC<ButtonProps> = ({
         activeOpacity={0.7}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
+        accessibilityRole="button"
+        accessibilityLabel={props.accessibilityLabel || title}
+        accessibilityState={{ disabled: disabled || loading }}
+        accessibilityHint={props.accessibilityHint}
         {...props}
       >
         {renderContent()}

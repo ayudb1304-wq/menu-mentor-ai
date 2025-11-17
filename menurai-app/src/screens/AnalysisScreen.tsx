@@ -18,6 +18,7 @@ import { Button, Card, LoadingOverlay, SkeletonMenuItem, PageTransition, PulseLo
 import { ScanStackParamList } from '../navigation/types';
 import menuAnalysisService, { MenuItem, AnalysisResult } from '../services/menuAnalysisService';
 import historyService from '../services/historyService';
+import { getErrorMessage, isRetryableError } from '../utils/errorMessages';
 
 type AnalysisScreenRouteProp = RouteProp<ScanStackParamList, 'Analysis'>;
 
@@ -191,13 +192,17 @@ export const AnalysisScreen: React.FC = () => {
       }
     } catch (err: any) {
       console.error('Analysis error:', err);
-      setError(err.message || 'Failed to analyze menu');
+      const errorInfo = getErrorMessage(err, { 
+        operation: 'menu analysis',
+        retryable: isRetryableError(err),
+      });
+      setError(errorInfo.message);
       Alert.alert(
-        'Analysis Failed',
-        err.message || 'Failed to analyze menu. Please try again.',
+        errorInfo.title,
+        errorInfo.message,
         [
-          { text: 'Try Again', onPress: startAnalysis },
-          { text: 'Go Back', onPress: () => navigation.goBack() },
+          ...(errorInfo.action === 'Retry' ? [{ text: 'Try Again', onPress: startAnalysis }] : []),
+          { text: 'Go Back', onPress: () => navigation.goBack(), style: 'cancel' },
         ]
       );
     } finally {
@@ -225,7 +230,7 @@ export const AnalysisScreen: React.FC = () => {
           </View>
           <View style={styles.loadingContainer}>
             <View style={styles.loadingContent}>
-              <Utensils size={48} color={Colors.brand.blue} />
+              <Utensils size={48} color={Colors.brand.primary} />
               <LoadingText />
               <Text style={[styles.loadingHint, { color: colors.secondaryText }]}>
                 This may take up to 30 seconds

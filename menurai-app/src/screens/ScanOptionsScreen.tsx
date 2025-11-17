@@ -33,6 +33,7 @@ import {
 } from '../components';
 import historyService, { ScanHistory } from '../services/historyService';
 import { useUserProfile } from '../hooks/useUserProfile';
+import { getErrorMessage, isRetryableError } from '../utils/errorMessages';
 
 type NavigationProp = StackNavigationProp<ScanStackParamList, 'ScanOptions'>;
 
@@ -61,6 +62,7 @@ export const ScanOptionsScreen: React.FC = () => {
       setRecentScans(scans.slice(0, 3)); // Show only 3 most recent scans
     } catch (error) {
       console.error('Error loading recent scans:', error);
+      // Don't show alert for background loading errors, just log them
     } finally {
       setLoadingRecent(false);
     }
@@ -124,9 +126,17 @@ export const ScanOptionsScreen: React.FC = () => {
           imageUri: result.assets[0].uri,
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error taking photo:', error);
-      Alert.alert('Error', 'Failed to take photo. Please try again.');
+      const errorInfo = getErrorMessage(error, { 
+        operation: 'taking photo',
+        retryable: isRetryableError(error),
+      });
+      Alert.alert(
+        errorInfo.title,
+        errorInfo.message,
+        errorInfo.action === 'Retry' ? [{ text: 'Retry', onPress: handleTakePhoto }] : [{ text: 'OK' }]
+      );
     } finally {
       setIsLoading(false);
     }
@@ -158,9 +168,17 @@ export const ScanOptionsScreen: React.FC = () => {
           imageUri: result.assets[0].uri,
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error selecting image:', error);
-      Alert.alert('Error', 'Failed to select image. Please try again.');
+      const errorInfo = getErrorMessage(error, { 
+        operation: 'selecting image',
+        retryable: isRetryableError(error),
+      });
+      Alert.alert(
+        errorInfo.title,
+        errorInfo.message,
+        errorInfo.action === 'Retry' ? [{ text: 'Retry', onPress: handleSelectFromGallery }] : [{ text: 'OK' }]
+      );
     } finally {
       setIsLoading(false);
     }
@@ -200,8 +218,8 @@ export const ScanOptionsScreen: React.FC = () => {
           {/* Header Section with Glass Effect */}
           <GlassCard style={styles.headerGlass} intensity={60}>
             <View style={styles.header}>
-              <View style={[styles.headerIcon, { backgroundColor: Colors.brand.blue + '20' }]}>
-                <Utensils size={48} color={Colors.brand.blue} />
+              <View style={[styles.headerIcon, { backgroundColor: Colors.brand.primary + '20' }]}>
+                <Utensils size={48} color={Colors.brand.primary} />
               </View>
               <Text style={[styles.title, { color: colors.primaryText }]}>
                 Scan a Menu
@@ -360,7 +378,7 @@ export const ScanOptionsScreen: React.FC = () => {
 
             <View style={styles.optionsContainer}>
               <OptionCard
-                icon={<Camera size={32} color={Colors.brand.blue} />}
+                icon={<Camera size={32} color={Colors.brand.primary} />}
                 title="Take Photo"
                 description="Use your camera to capture a menu"
                 onPress={handleTakePhoto}
@@ -388,7 +406,7 @@ export const ScanOptionsScreen: React.FC = () => {
       {isLoading && (
         <View style={styles.loadingOverlay}>
           <GlassCard style={styles.loadingCard} intensity={95}>
-            <PulseLoader size={80} color={Colors.brand.blue} />
+            <PulseLoader size={80} color={Colors.brand.primary} />
             <Text style={[styles.loadingText, { color: colors.primaryText }]}>Processing...</Text>
           </GlassCard>
         </View>

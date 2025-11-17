@@ -15,7 +15,7 @@ import { ContactSupportScreen } from '../screens/ContactSupportScreen';
 import { RootStackParamList } from './types';
 import { useTheme } from '../theme/ThemeContext';
 import { Colors } from '../theme/colors';
-import { AppHeader } from '../components';
+import { AppHeader, NetworkStatusBar } from '../components';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -44,13 +44,14 @@ export const AppNavigator: React.FC = () => {
   if (authLoading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
-        <ActivityIndicator size="large" color={Colors.brand.blue} />
+        <ActivityIndicator size="large" color={Colors.brand.primary} />
       </View>
     );
   }
 
   return (
     <NavigationContainer>
+      <NetworkStatusBar />
       <AuthWrapper>
         <Stack.Navigator screenOptions={screenOptions}>
           {!user ? (
