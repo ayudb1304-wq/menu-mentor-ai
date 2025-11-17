@@ -16,7 +16,8 @@ import { Colors } from '../theme/colors';
 import { Typography, Spacing, BorderRadius } from '../theme/styles';
 import { Button, Chip, LoadingOverlay, Card } from '../components';
 import { useUserProfile } from '../hooks/useUserProfile';
-import { DIETARY_PRESETS } from '../services/userService';
+import userService, { DIETARY_PRESETS } from '../services/userService';
+import { useAuth } from '../hooks/useAuth';
 import { useNavigation, useRoute, RouteProp, CommonActions } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/types';
@@ -28,16 +29,25 @@ export const ProfileSetupScreen: React.FC = () => {
   const { colors } = useTheme();
   const navigation = useNavigation<ProfileSetupScreenNavigationProp>();
   const route = useRoute<ProfileSetupScreenRouteProp>();
+  const { user } = useAuth();
   const isEditMode = route.params?.isEditMode || false;
+  const isNewProfile = route.params?.isNewProfile || false;
+  const routeProfileId = route.params?.profileId;
   const {
-    profile,
+    activeProfile,
+    allProfiles,
     canEditDietaryPresets,
     daysRemainingForEdit,
     isFreeEdit,
     updateDietaryPreferences,
     loading,
   } = useUserProfile();
+  const targetProfile = routeProfileId
+    ? allProfiles.find((profileOption) => profileOption.id === routeProfileId)
+    : activeProfile;
+  const isCreatingProfile = isNewProfile || !targetProfile;
 
+  const [profileName, setProfileName] = useState('');
   const [selectedPresets, setSelectedPresets] = useState<string[]>([]);
   const [customRestriction, setCustomRestriction] = useState('');
   const [customRestrictions, setCustomRestrictions] = useState<string[]>([]);
@@ -45,14 +55,20 @@ export const ProfileSetupScreen: React.FC = () => {
 
   // Initialize with existing profile data in edit mode
   useEffect(() => {
-    if (isEditMode && profile) {
-      setSelectedPresets(profile.dietaryPresets || []);
-      setCustomRestrictions(profile.customRestrictions || []);
+    if (targetProfile) {
+      setProfileName(targetProfile.name);
+      setSelectedPresets(targetProfile.dietaryPresets || []);
+      setCustomRestrictions(targetProfile.customRestrictions || []);
+    } else {
+      setProfileName('');
+      setSelectedPresets([]);
+      setCustomRestrictions([]);
     }
-  }, [isEditMode, profile]);
+  }, [targetProfile]);
 
   const togglePreset = (preset: string) => {
-    if (!canEditDietaryPresets && isEditMode) {
+    const editingExistingProfile = !isCreatingProfile && isEditMode;
+    if (editingExistingProfile && !canEditDietaryPresets) {
       const message = isFreeEdit
         ? 'This is your free edit. After this, dietary preferences will be locked for 30 days.'
         : `You can edit your dietary preferences in ${daysRemainingForEdit} days.`;
@@ -96,15 +112,33 @@ export const ProfileSetupScreen: React.FC = () => {
       return;
     }
 
+    const trimmedName = profileName.trim();
+    if (!trimmedName) {
+      Alert.alert('Profile Name Required', 'Please enter a profile name to continue.', [{ text: 'OK' }]);
+      return;
+    }
+
+    if (!user) {
+      Alert.alert('Error', 'User not authenticated', [{ text: 'OK' }]);
+      return;
+    }
+
     setIsSaving(true);
     try {
-      await updateDietaryPreferences(selectedPresets, customRestrictions);
+      let profileId = targetProfile?.id ?? null;
 
-      if (isEditMode) {
+      if (!profileId) {
+        profileId = await userService.createProfile(user.uid, trimmedName);
+      }
+
+      await updateDietaryPreferences(selectedPresets, customRestrictions, {
+        profileId,
+        name: trimmedName,
+      });
+
+      if (isEditMode || routeProfileId) {
         navigation.goBack();
       } else {
-        // For new users, navigate to Home after completing setup
-        // Reset the navigation stack so they can't go back to setup
         navigation.dispatch(
           CommonActions.reset({
             index: 0,
@@ -113,26 +147,34 @@ export const ProfileSetupScreen: React.FC = () => {
         );
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to save preferences', [
-        { text: 'OK' },
-      ]);
+      Alert.alert('Error', error.message || 'Failed to save preferences', [{ text: 'OK' }]);
     } finally {
       setIsSaving(false);
     }
   };
 
   const canSave = () => {
-    if (!isEditMode) return true;
+    if (isCreatingProfile) {
+      return profileName.trim().length > 0;
+    }
 
-    // In edit mode, check if presets can be edited
-    if (!canEditDietaryPresets &&
-        JSON.stringify(selectedPresets.sort()) !== JSON.stringify(profile?.dietaryPresets?.sort())) {
+    if (!targetProfile) {
       return false;
     }
 
-    // Always allow saving if only restrictions changed
-    return JSON.stringify(customRestrictions.sort()) !== JSON.stringify(profile?.customRestrictions?.sort()) ||
-           JSON.stringify(selectedPresets.sort()) !== JSON.stringify(profile?.dietaryPresets?.sort());
+    const presetsChanged =
+      JSON.stringify([...selectedPresets].sort()) !==
+      JSON.stringify([...(targetProfile.dietaryPresets || [])].sort());
+    const restrictionsChanged =
+      JSON.stringify([...customRestrictions].sort()) !==
+      JSON.stringify([...(targetProfile.customRestrictions || [])].sort());
+    const nameChanged = profileName.trim() !== targetProfile.name;
+
+    if (!canEditDietaryPresets && presetsChanged) {
+      return false;
+    }
+
+    return presetsChanged || restrictionsChanged || nameChanged;
   };
 
   return (
@@ -147,17 +189,37 @@ export const ProfileSetupScreen: React.FC = () => {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Description */}
-          {!isEditMode && (
-            <View style={styles.descriptionContainer}>
-              <Text style={[styles.description, { color: colors.secondaryText }]}>
-                Help us understand your dietary needs for personalized menu analysis
-              </Text>
-            </View>
-          )}
+        {/* Description */}
+        {!isEditMode && (
+          <View style={styles.descriptionContainer}>
+            <Text style={[styles.description, { color: colors.secondaryText }]}>
+              Help us understand your dietary needs for personalized menu analysis
+            </Text>
+          </View>
+        )}
+
+        <Card style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.primaryText }]}>
+            Profile Name
+          </Text>
+          <TextInput
+            style={[
+              styles.nameInput,
+              {
+                color: colors.primaryText,
+                backgroundColor: colors.background,
+                borderColor: colors.border,
+              },
+            ]}
+            placeholder="e.g., David's Nut Allergy"
+            placeholderTextColor={colors.secondaryText}
+            value={profileName}
+            onChangeText={setProfileName}
+          />
+        </Card>
 
           {/* Free Edit Notice */}
-          {isEditMode && isFreeEdit && (
+        {isEditMode && !isCreatingProfile && isFreeEdit && (
             <View style={[styles.freeEditNotice, { backgroundColor: Colors.brand.blue + '20' }]}>
               <Info size={16} color={Colors.brand.blue} />
               <Text style={[styles.freeEditText, { color: Colors.brand.blue }]}>
@@ -172,7 +234,7 @@ export const ProfileSetupScreen: React.FC = () => {
               <Text style={[styles.sectionTitle, { color: colors.primaryText }]}>
                 Dietary Preferences
               </Text>
-              {isEditMode && !canEditDietaryPresets && (
+                {!isCreatingProfile && isEditMode && !canEditDietaryPresets && (
                 <Text style={[styles.lockText, { color: Colors.light.warning }]}>
                   Locked for {daysRemainingForEdit} days
                 </Text>
@@ -263,7 +325,7 @@ export const ProfileSetupScreen: React.FC = () => {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <LoadingOverlay visible={loading} message="Loading profile..." />
+        <LoadingOverlay visible={loading} message="Loading profiles..." />
     </SafeAreaView>
   );
 };
@@ -280,15 +342,23 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     paddingBottom: Spacing.xl * 2, // Extra padding for bottom actions
   },
-  descriptionContainer: {
-    marginBottom: Spacing.lg,
-  },
-  description: {
-    ...Typography.body,
-  },
-  section: {
-    marginBottom: Spacing.lg,
-  },
+    descriptionContainer: {
+      marginBottom: Spacing.lg,
+    },
+    description: {
+      ...Typography.body,
+    },
+    section: {
+      marginBottom: Spacing.lg,
+    },
+    nameInput: {
+      borderWidth: 1,
+      borderRadius: BorderRadius.md,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
+      marginTop: Spacing.sm,
+      ...Typography.body,
+    },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',

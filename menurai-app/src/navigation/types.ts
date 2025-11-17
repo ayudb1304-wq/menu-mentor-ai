@@ -1,6 +1,6 @@
 export type RootStackParamList = {
   Auth: undefined;
-  ProfileSetup: { isEditMode?: boolean };
+  ProfileSetup: { isEditMode?: boolean; isNewProfile?: boolean; profileId?: string };
   Home: undefined;
   Terms: undefined;
   PrivacyPolicy: undefined;

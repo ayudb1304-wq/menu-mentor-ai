@@ -1,13 +1,17 @@
 import {
+  addDoc,
+  collection,
   doc,
   getDoc,
-  setDoc,
-  updateDoc,
   onSnapshot,
+  QueryDocumentSnapshot,
+  setDoc,
   Timestamp,
+  updateDoc,
   serverTimestamp,
+  DocumentSnapshot,
 } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { db, auth } from '../config/firebase';
 import { User } from 'firebase/auth';
 
 export type SubscriptionStatus =
@@ -19,23 +23,32 @@ export type SubscriptionStatus =
   | 'pending_cancel';
 
 export interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  dietaryPresets: string[];
+  customRestrictions: string[];
+  lastDietUpdate: Timestamp | null;
+  hasUsedFreeEdit: boolean;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface UserData {
   uid: string;
   email: string;
   displayName: string;
   photoURL: string | null;
   profileComplete: boolean;
-  dietaryPresets: string[];
-  customRestrictions: string[];
-  lastDietUpdate: Timestamp | null;
-  hasUsedFreeEdit: boolean; // Track if user has used their free edit after initial setup
-  isPremium: boolean; // Premium subscription status
-  scanCount: number; // Track number of scans for freemium users
+  isPremium: boolean;
+  scanCount: number;
   createdAt: Timestamp;
   updatedAt: Timestamp;
   subscriptionId: string | null;
   subscriptionStatus: SubscriptionStatus;
   planId: string | null;
   validUntil: Timestamp | null;
+  activeProfileId: string | null;
 }
 
 export const DIETARY_PRESETS = [
@@ -60,147 +73,292 @@ class UserService {
     return validUntil.toDate().getTime() > Date.now();
   }
 
-  private normalizeProfileData(data: any): UserProfile {
-    const rawStatus = data?.subscriptionStatus;
+  private normalizeUserData(rawData: any, uid: string): UserData {
+    const rawStatus = rawData?.subscriptionStatus;
     const subscriptionStatus: SubscriptionStatus = this.isValidSubscriptionStatus(rawStatus)
       ? rawStatus
       : 'free';
 
-    const rawValidUntil = data?.validUntil;
+    const rawValidUntil = rawData?.validUntil;
     const validUntil =
       rawValidUntil && typeof rawValidUntil.toDate === 'function'
         ? (rawValidUntil as Timestamp)
         : null;
 
-    const normalized: UserProfile = {
-      ...data,
-      subscriptionId: data?.subscriptionId ?? null,
-      planId: data?.planId ?? null,
-      subscriptionStatus,
-      validUntil,
-      isPremium: this.computeIsPremium(subscriptionStatus, validUntil),
-    };
+    const rawCreatedAt = rawData?.createdAt;
+    const rawUpdatedAt = rawData?.updatedAt;
 
-    return normalized;
+    const createdAt =
+      rawCreatedAt && typeof rawCreatedAt.toDate === 'function'
+        ? (rawCreatedAt as Timestamp)
+        : Timestamp.now();
+    const updatedAt =
+      rawUpdatedAt && typeof rawUpdatedAt.toDate === 'function'
+        ? (rawUpdatedAt as Timestamp)
+        : Timestamp.now();
+
+    const computedIsPremium = this.computeIsPremium(subscriptionStatus, validUntil);
+
+    return {
+      uid: rawData?.uid ?? uid,
+      email: rawData?.email ?? '',
+      displayName: rawData?.displayName ?? '',
+      photoURL: rawData?.photoURL ?? null,
+      profileComplete: !!rawData?.profileComplete,
+      isPremium: computedIsPremium,
+      scanCount: typeof rawData?.scanCount === 'number' ? rawData.scanCount : 0,
+      createdAt,
+      updatedAt,
+      subscriptionId: rawData?.subscriptionId ?? null,
+      subscriptionStatus,
+      planId: rawData?.planId ?? null,
+      validUntil,
+      activeProfileId: rawData?.activeProfileId ?? null,
+    };
   }
 
-  private isPremiumUser(profile: UserProfile | null): boolean {
-    if (!profile) return false;
-    return this.computeIsPremium(profile.subscriptionStatus, profile.validUntil);
+  private mapProfileDoc(snapshot: QueryDocumentSnapshot | DocumentSnapshot): UserProfile {
+    const data = snapshot.data() ?? {};
+    const rawCreatedAt = (data as any)?.createdAt;
+    const rawUpdatedAt = (data as any)?.updatedAt;
+
+    return {
+      id: snapshot.id,
+      name: data?.name ?? 'My Profile',
+      email: data?.email ?? '',
+      dietaryPresets: Array.isArray(data?.dietaryPresets) ? data.dietaryPresets : [],
+      customRestrictions: Array.isArray(data?.customRestrictions) ? data.customRestrictions : [],
+      lastDietUpdate:
+        data?.lastDietUpdate && typeof data.lastDietUpdate.toDate === 'function'
+          ? (data.lastDietUpdate as Timestamp)
+          : null,
+      hasUsedFreeEdit: !!data?.hasUsedFreeEdit,
+      createdAt:
+        rawCreatedAt && typeof rawCreatedAt.toDate === 'function'
+          ? (rawCreatedAt as Timestamp)
+          : Timestamp.now(),
+      updatedAt:
+        rawUpdatedAt && typeof rawUpdatedAt.toDate === 'function'
+          ? (rawUpdatedAt as Timestamp)
+          : Timestamp.now(),
+    };
+  }
+
+  private isPremiumUser(userData: UserData | null): boolean {
+    if (!userData) return false;
+    return this.computeIsPremium(userData.subscriptionStatus, userData.validUntil);
   }
 
   /**
-   * Get user profile from Firestore
+   * Get user data document
    */
-  async getUserProfile(uid: string): Promise<UserProfile | null> {
+  async getUserData(uid: string): Promise<UserData | null> {
     try {
       const userDoc = await getDoc(doc(db, 'users', uid));
       if (userDoc.exists()) {
-        return this.normalizeProfileData(userDoc.data());
+        return this.normalizeUserData(userDoc.data(), uid);
       }
       return null;
     } catch (error) {
-      console.error('Error fetching user profile:', error);
+      console.error('Error fetching user data:', error);
       throw error;
     }
   }
 
   /**
+   * Fetch a profile by ID
+   */
+  async getProfileById(uid: string, profileId: string): Promise<UserProfile | null> {
+    try {
+      const profileRef = doc(db, 'users', uid, 'profiles', profileId);
+      const snapshot = await getDoc(profileRef);
+      if (!snapshot.exists()) {
+        return null;
+      }
+      return this.mapProfileDoc(snapshot);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch the active user profile (backwards compatible helper)
+   */
+  async getUserProfile(uid: string): Promise<UserProfile | null> {
+    const userData = await this.getUserData(uid);
+    if (!userData?.activeProfileId) {
+      return null;
+    }
+    return this.getProfileById(uid, userData.activeProfileId);
+  }
+
+  /**
    * Create or update user profile
    */
-  async createOrUpdateProfile(user: User): Promise<UserProfile> {
+  async createOrUpdateProfile(user: User): Promise<UserData> {
     try {
       const userRef = doc(db, 'users', user.uid);
-      const existingProfile = await this.getUserProfile(user.uid);
+      const existingUserData = await this.getUserData(user.uid);
 
-      if (existingProfile) {
-        // Update existing profile
+      if (existingUserData) {
         const updates = {
-          email: user.email || existingProfile.email,
-          displayName: user.displayName || existingProfile.displayName,
-          photoURL: user.photoURL || existingProfile.photoURL,
+          email: user.email || existingUserData.email,
+          displayName: user.displayName || existingUserData.displayName,
+          photoURL: user.photoURL ?? existingUserData.photoURL,
           updatedAt: serverTimestamp(),
         };
         await updateDoc(userRef, updates);
-        const refreshedProfile = await this.getUserProfile(user.uid);
-        if (!refreshedProfile) {
-          throw new Error('Failed to refresh user profile after update');
+        const refreshed = await this.getUserData(user.uid);
+        if (!refreshed) {
+          throw new Error('Failed to refresh user data after update');
         }
-        return refreshedProfile;
+        return refreshed;
       } else {
-        // Create new profile
-        const newProfile: Partial<UserProfile> = {
+        const newUser: Partial<UserData> = {
           uid: user.uid,
           email: user.email || '',
           displayName: user.displayName || '',
-          photoURL: user.photoURL,
+          photoURL: user.photoURL ?? null,
           profileComplete: false,
-          dietaryPresets: [],
-          customRestrictions: [],
-          lastDietUpdate: null,
-          hasUsedFreeEdit: false, // New users haven't used their free edit yet
-          isPremium: false, // Default to free tier
-          scanCount: 0, // New users start with 0 scans
+          isPremium: false,
+          scanCount: 0,
           createdAt: serverTimestamp() as Timestamp,
           updatedAt: serverTimestamp() as Timestamp,
           subscriptionId: null,
           subscriptionStatus: 'free',
           planId: null,
           validUntil: null,
+          activeProfileId: null,
         };
-        await setDoc(userRef, newProfile);
-        const createdProfile = await this.getUserProfile(user.uid);
-        if (!createdProfile) {
-          throw new Error('Failed to load user profile after creation');
+        await setDoc(userRef, newUser);
+        const created = await this.getUserData(user.uid);
+        if (!created) {
+          throw new Error('Failed to load user data after creation');
         }
-        return createdProfile;
+        return created;
       }
     } catch (error) {
-      console.error('Error creating/updating user profile:', error);
+      console.error('Error creating/updating user data:', error);
       throw error;
     }
   }
 
   /**
-   * Update dietary preferences
+   * Create a new profile within the user's subcollection
    */
-  async updateDietaryPreferences(
-    uid: string,
-    dietaryPresets: string[],
-    customRestrictions: string[]
-  ): Promise<void> {
+  async createProfile(uid: string, profileName: string): Promise<string> {
+    const trimmedName = profileName.trim();
+    if (!trimmedName) {
+      throw new Error('Profile name is required');
+    }
+
     try {
-      const userRef = doc(db, 'users', uid);
-      const profile = await this.getUserProfile(uid);
-
-      // Check if dietary presets are being changed
-      const presetsChanged =
-        JSON.stringify(profile?.dietaryPresets?.sort()) !==
-        JSON.stringify(dietaryPresets.sort());
-
-      const updates: any = {
-        dietaryPresets,
-        customRestrictions,
-        profileComplete: true,
-        updatedAt: serverTimestamp(),
+      const profilesRef = collection(db, 'users', uid, 'profiles');
+      const newProfile: Omit<UserProfile, 'id'> = {
+        name: trimmedName,
+        email: auth.currentUser?.email || '',
+        dietaryPresets: [],
+        customRestrictions: [],
+        lastDietUpdate: null,
+        hasUsedFreeEdit: false,
+        createdAt: serverTimestamp() as Timestamp,
+        updatedAt: serverTimestamp() as Timestamp,
       };
 
-      // Handle free edit logic
-      if (profile?.profileComplete) {
-        // This is an edit after initial setup
+      const docRef = await addDoc(profilesRef, newProfile);
+      const userData = await this.getUserData(uid);
+      const shouldSetActive = !userData?.activeProfileId;
+      const userRef = doc(db, 'users', uid);
+
+      await setDoc(userRef, {
+        profileComplete: true,
+        activeProfileId: shouldSetActive ? docRef.id : userData?.activeProfileId ?? docRef.id,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+
+      return docRef.id;
+    } catch (error) {
+      console.error('Error creating profile:', error);
+      throw error;
+    }
+  }
+
+  subscribeToAllProfiles(uid: string, callback: (profiles: UserProfile[]) => void) {
+    const profilesRef = collection(db, 'users', uid, 'profiles');
+    return onSnapshot(
+      profilesRef,
+      (snapshot) => {
+        const profiles = snapshot.docs.map((docSnap) => this.mapProfileDoc(docSnap));
+        callback(profiles);
+      },
+      (error) => {
+        console.error('Error listening to profiles:', error);
+        callback([]);
+      }
+    );
+  }
+
+  async setActiveProfile(uid: string, profileId: string) {
+    const userRef = doc(db, 'users', uid);
+    await updateDoc(userRef, {
+      activeProfileId: profileId,
+      updatedAt: serverTimestamp(),
+    });
+  }
+
+  /**
+   * Update dietary preferences
+   */
+  async updateProfilePreferences(
+    uid: string,
+    profileId: string,
+    dietaryPresets: string[],
+    customRestrictions: string[],
+    options?: { name?: string }
+  ): Promise<void> {
+    try {
+      const profileRef = doc(db, 'users', uid, 'profiles', profileId);
+      const profileSnap = await getDoc(profileRef);
+
+      if (!profileSnap.exists()) {
+        throw new Error('Profile not found');
+      }
+
+      const profile = this.mapProfileDoc(profileSnap);
+      const sortedExisting = [...(profile.dietaryPresets ?? [])].sort();
+      const sortedIncoming = [...dietaryPresets].sort();
+      const presetsChanged = JSON.stringify(sortedExisting) !== JSON.stringify(sortedIncoming);
+
+      const isInitialSetup =
+        (profile.dietaryPresets?.length ?? 0) === 0 && (profile.customRestrictions?.length ?? 0) === 0;
+
+      const updates: Partial<UserProfile> = {
+        dietaryPresets,
+        customRestrictions,
+        updatedAt: serverTimestamp() as Timestamp,
+      };
+
+      const trimmedName = options?.name?.trim();
+      if (trimmedName) {
+        updates.name = trimmedName;
+      }
+
+      if (!isInitialSetup) {
         if (!profile.hasUsedFreeEdit) {
-          // This is the free edit - mark it as used but don't set lastDietUpdate
           updates.hasUsedFreeEdit = true;
         } else if (presetsChanged) {
-          // Free edit already used, apply 30-day lock for future edits
-          updates.lastDietUpdate = serverTimestamp();
+          updates.lastDietUpdate = serverTimestamp() as Timestamp;
         }
       }
-      // If profile not complete, this is initial setup - no restrictions
 
-      await updateDoc(userRef, updates);
+      await updateDoc(profileRef, updates);
+      await updateDoc(doc(db, 'users', uid), {
+        profileComplete: true,
+        updatedAt: serverTimestamp(),
+      });
     } catch (error) {
-      console.error('Error updating dietary preferences:', error);
+      console.error('Error updating profile preferences:', error);
       throw error;
     }
   }
@@ -216,19 +374,21 @@ class UserService {
     daysRemaining: number;
     isFreeEdit: boolean;
   } {
-    // No profile or initial setup - always allowed
-    if (!profile || !profile.profileComplete) {
+    if (!profile) {
       return { canEdit: true, daysRemaining: 0, isFreeEdit: false };
     }
 
-    // Check if user hasn't used their free edit yet
+    const hasAnyPreferences =
+      (profile.dietaryPresets?.length ?? 0) > 0 || (profile.customRestrictions?.length ?? 0) > 0;
+    if (!hasAnyPreferences) {
+      return { canEdit: true, daysRemaining: 0, isFreeEdit: false };
+    }
+
     if (!profile.hasUsedFreeEdit) {
       return { canEdit: true, daysRemaining: 0, isFreeEdit: true };
     }
 
-    // Free edit used, check 30-day lock
     if (!profile.lastDietUpdate) {
-      // No lastDietUpdate yet (shouldn't happen, but handle gracefully)
       return { canEdit: true, daysRemaining: 0, isFreeEdit: false };
     }
 
@@ -249,20 +409,20 @@ class UserService {
   /**
    * Check if user can scan (freemium limit: 5 scans)
    */
-  canScan(profile: UserProfile | null): boolean {
-    if (!profile) return false;
-    if (this.isPremiumUser(profile)) return true; // Premium users have unlimited scans
-    const currentCount = profile.scanCount ?? 0; // Default to 0 if undefined
-    return currentCount < 5; // Free users limited to 5 scans
+  canScan(userData: UserData | null): boolean {
+    if (!userData) return false;
+    if (this.isPremiumUser(userData)) return true;
+    const currentCount = userData.scanCount ?? 0;
+    return currentCount < 5;
   }
 
   /**
    * Get remaining scans for free users
    */
-  getRemainingScans(profile: UserProfile | null): number {
-    if (!profile) return 0;
-    if (this.isPremiumUser(profile)) return -1; // -1 means unlimited
-    const currentCount = profile.scanCount ?? 0; // Default to 0 if undefined
+  getRemainingScans(userData: UserData | null): number {
+    if (!userData) return 0;
+    if (this.isPremiumUser(userData)) return -1;
+    const currentCount = userData.scanCount ?? 0;
     return Math.max(0, 5 - currentCount);
   }
 
@@ -271,21 +431,20 @@ class UserService {
    */
   async incrementScanCount(uid: string): Promise<void> {
     try {
-      const userRef = doc(db, 'users', uid);
-      const profile = await this.getUserProfile(uid);
-      
-      if (!profile) {
-        throw new Error('User profile not found');
+      const userData = await this.getUserData(uid);
+      if (!userData) {
+        throw new Error('User data not found');
       }
 
-      // Only increment if user is not premium
-      if (!this.isPremiumUser(profile)) {
-        const currentCount = profile.scanCount ?? 0; // Default to 0 if undefined
-        await updateDoc(userRef, {
-          scanCount: currentCount + 1,
-          updatedAt: serverTimestamp(),
-        });
+      if (this.isPremiumUser(userData)) {
+        return;
       }
+
+      const currentCount = userData.scanCount ?? 0;
+      await updateDoc(doc(db, 'users', uid), {
+        scanCount: currentCount + 1,
+        updatedAt: serverTimestamp(),
+      });
     } catch (error) {
       console.error('Error incrementing scan count:', error);
       throw error;
@@ -295,19 +454,19 @@ class UserService {
   /**
    * Subscribe to user profile changes
    */
-  subscribeToProfile(uid: string, callback: (profile: UserProfile | null) => void) {
+  subscribeToProfile(uid: string, callback: (userData: UserData | null) => void) {
     const userRef = doc(db, 'users', uid);
     return onSnapshot(
       userRef,
-      (doc) => {
-        if (doc.exists()) {
-          callback(this.normalizeProfileData(doc.data()));
+      (snapshot) => {
+        if (snapshot.exists()) {
+          callback(this.normalizeUserData(snapshot.data(), uid));
         } else {
           callback(null);
         }
       },
       (error) => {
-        console.error('Error listening to profile changes:', error);
+        console.error('Error listening to user data changes:', error);
         callback(null);
       }
     );

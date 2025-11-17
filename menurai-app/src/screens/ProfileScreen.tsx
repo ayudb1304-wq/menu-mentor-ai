@@ -21,6 +21,7 @@ import {
   Plus,
   Star,
   AlertCircle,
+  CheckCircle,
 } from '../components/icons';
 import { useTheme } from '../theme/ThemeContext';
 import { Colors } from '../theme/colors';
@@ -53,43 +54,51 @@ export const ProfileScreen: React.FC = () => {
   const { colors } = useTheme();
   const { user, signOut } = useAuth();
   const {
-    profile,
+    userData,
+    activeProfile,
+    allProfiles,
     canEditDietaryPresets,
     daysRemainingForEdit,
     isFreeEdit,
     isPremiumUser,
+    setActiveProfile: setActiveProfileId,
   } = useUserProfile();
   const navigation = useNavigation<any>();
   const [cancelLoading, setCancelLoading] = useState(false);
 
-  const subscriptionStatus = profile?.subscriptionStatus ?? 'free';
+  const subscriptionStatus = userData?.subscriptionStatus ?? 'free';
   const subscriptionStatusLabel =
     SUBSCRIPTION_STATUS_LABELS[subscriptionStatus as keyof typeof SUBSCRIPTION_STATUS_LABELS] ||
     'Free';
-  const planLabel = profile?.planId ? PLAN_LABELS[profile.planId] ?? 'Premium Plan' : 'Free Plan';
+  const planLabel = userData?.planId ? PLAN_LABELS[userData.planId] ?? 'Premium Plan' : 'Free Plan';
   const validUntilDate =
-    profile?.validUntil && typeof profile.validUntil.toDate === 'function'
-      ? profile.validUntil.toDate()
+    userData?.validUntil && typeof userData.validUntil.toDate === 'function'
+      ? userData.validUntil.toDate()
       : null;
   const validUntilText = validUntilDate ? format(validUntilDate, 'MMM d, yyyy') : null;
 
   const handleEditProfile = () => {
-    navigation.navigate('ProfileSetup', { isEditMode: true });
+    if (!activeProfile) {
+      Alert.alert('No Profile', 'Please select a profile to edit.');
+      return;
+    }
+    navigation.navigate('ProfileSetup', { isEditMode: true, profileId: activeProfile.id });
   };
 
   const handleAddProfile = () => {
     if (!isPremiumUser) {
-      // Freemium user - navigate to paywall with context
-      // Navigate to Scan tab, then to Paywall screen with context
       navigation.navigate('Scan', { screen: 'Paywall', params: { context: 'addProfile' } });
-    } else {
-      // Premium user - check if they can add more profiles (max 4)
-      // For now, show an alert. Later this can navigate to profile creation
-      Alert.alert(
-        'Add Profile',
-        'Profile creation feature coming soon. Premium users can add up to 4 profiles.',
-        [{ text: 'OK' }]
-      );
+      return;
+    }
+
+    navigation.navigate('ProfileSetup', { isEditMode: false, isNewProfile: true });
+  };
+
+  const handleSelectProfile = async (profileId: string) => {
+    try {
+      await setActiveProfileId(profileId);
+    } catch (error: any) {
+      Alert.alert('Error', error?.message ?? 'Failed to switch profile');
     }
   };
 
@@ -282,64 +291,105 @@ export const ProfileScreen: React.FC = () => {
         {/* Dietary Profile Card */}
         <Card style={styles.section}>
           <View style={styles.sectionHeader}>
-          <View style={styles.sectionTitleRow}>
-            <Utensils size={24} color={Colors.brand.green} />
+            <View style={styles.sectionTitleRow}>
+              <Utensils size={24} color={Colors.brand.green} />
               <Text style={[styles.sectionTitle, { color: colors.primaryText }]}>
                 Dietary Profile
               </Text>
-          </View>
-          <TouchableOpacity onPress={handleEditProfile}>
-            <Edit2 size={20} color={Colors.brand.blue} />
+            </View>
+            <TouchableOpacity onPress={handleEditProfile}>
+              <Edit2 size={20} color={Colors.brand.blue} />
             </TouchableOpacity>
           </View>
 
-          {!canEditDietaryPresets && !isFreeEdit && (
-            <View style={[styles.lockNotice, { backgroundColor: Colors.light.warning + '20' }]}>
-              <Lock size={16} color={Colors.light.warning} />
-              <Text style={[styles.lockText, { color: Colors.light.warning }]}>
-                Dietary preferences locked for {daysRemainingForEdit} days
-              </Text>
-            </View>
-          )}
+          <Text style={[styles.subsectionTitle, { color: colors.secondaryText }]}>
+            My Profiles
+          </Text>
+          <View style={styles.profileListContainer}>
+            {allProfiles.map((profileOption) => (
+              <TouchableOpacity
+                key={profileOption.id}
+                style={[
+                  styles.profileRow,
+                  { borderColor: colors.border },
+                  profileOption.id === activeProfile?.id && styles.profileRowActive,
+                ]}
+                onPress={() => handleSelectProfile(profileOption.id)}
+              >
+                <Text style={[styles.profileName, { color: colors.primaryText }]}>
+                  {profileOption.name}
+                </Text>
+                {profileOption.id === activeProfile?.id && (
+                  <CheckCircle size={20} color={Colors.brand.green} />
+                )}
+              </TouchableOpacity>
+            ))}
+            <Button
+              title="Add New Profile"
+              variant="outline"
+              onPress={handleAddProfile}
+              icon={<Plus size={18} color={Colors.brand.blue} />}
+              style={{ marginTop: Spacing.md }}
+            />
+          </View>
 
-          {isFreeEdit && (
-            <View style={[styles.lockNotice, { backgroundColor: Colors.brand.blue + '20' }]}>
-              <Info size={16} color={Colors.brand.blue} />
-              <Text style={[styles.lockText, { color: Colors.brand.blue }]}>
-                You have one free edit available
-              </Text>
-            </View>
-          )}
+          <View style={styles.separator} />
 
-          {profile?.dietaryPresets && profile.dietaryPresets.length > 0 && (
+          {activeProfile ? (
             <>
-              <Text style={[styles.subsectionTitle, { color: colors.secondaryText }]}>
-                Dietary Preferences
-              </Text>
-              <View style={styles.chipsContainer}>
-                {profile.dietaryPresets.map((preset) => (
-                  <Chip key={preset} label={preset} selected variant="filter" />
-                ))}
-              </View>
-            </>
-          )}
+              {!canEditDietaryPresets && !isFreeEdit && (
+                <View style={[styles.lockNotice, { backgroundColor: Colors.light.warning + '20' }]}>
+                  <Lock size={16} color={Colors.light.warning} />
+                  <Text style={[styles.lockText, { color: Colors.light.warning }]}>
+                    Dietary preferences locked for {daysRemainingForEdit} days
+                  </Text>
+                </View>
+              )}
 
-          {profile?.customRestrictions && profile.customRestrictions.length > 0 && (
-            <>
-              <Text style={[styles.subsectionTitle, { color: colors.secondaryText }]}>
-                Restrictions
-              </Text>
-              <View style={styles.chipsContainer}>
-                {profile.customRestrictions.map((restriction) => (
-                  <Chip key={restriction} label={restriction} selected variant="input" />
-                ))}
-              </View>
-            </>
-          )}
+              {isFreeEdit && (
+                <View style={[styles.lockNotice, { backgroundColor: Colors.brand.blue + '20' }]}>
+                  <Info size={16} color={Colors.brand.blue} />
+                  <Text style={[styles.lockText, { color: Colors.brand.blue }]}>
+                    You have one free edit available
+                  </Text>
+                </View>
+              )}
 
-          {(!profile?.dietaryPresets?.length && !profile?.customRestrictions?.length) && (
+              {activeProfile.dietaryPresets && activeProfile.dietaryPresets.length > 0 && (
+                <>
+                  <Text style={[styles.subsectionTitle, { color: colors.secondaryText }]}>
+                    Active Preferences ({activeProfile.name})
+                  </Text>
+                  <View style={styles.chipsContainer}>
+                    {activeProfile.dietaryPresets.map((preset) => (
+                      <Chip key={preset} label={preset} selected variant="filter" />
+                    ))}
+                  </View>
+                </>
+              )}
+
+              {activeProfile.customRestrictions && activeProfile.customRestrictions.length > 0 && (
+                <>
+                  <Text style={[styles.subsectionTitle, { color: colors.secondaryText }]}>
+                    Restrictions
+                  </Text>
+                  <View style={styles.chipsContainer}>
+                    {activeProfile.customRestrictions.map((restriction) => (
+                      <Chip key={restriction} label={restriction} selected variant="input" />
+                    ))}
+                  </View>
+                </>
+              )}
+
+              {!activeProfile.dietaryPresets?.length && !activeProfile.customRestrictions?.length && (
+                <Text style={[styles.emptyText, { color: colors.secondaryText }]}>
+                  No dietary preferences set. Tap edit to add your preferences.
+                </Text>
+              )}
+            </>
+          ) : (
             <Text style={[styles.emptyText, { color: colors.secondaryText }]}>
-              No dietary preferences set. Tap edit to add your preferences.
+              No profile selected. Tap 'Add New Profile' to get started.
             </Text>
           )}
         </Card>
@@ -538,16 +588,37 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.sm,
     marginBottom: Spacing.md,
   },
-  lockText: {
-    ...Typography.caption,
-    marginLeft: Spacing.xs,
-    fontWeight: '600' as '600',
-  },
-  subsectionTitle: {
-    ...Typography.bodySmall,
-    marginBottom: Spacing.sm,
-    fontWeight: '600' as '600',
-  },
+    lockText: {
+      ...Typography.caption,
+      marginLeft: Spacing.xs,
+      fontWeight: '600' as '600',
+    },
+    subsectionTitle: {
+      ...Typography.bodySmall,
+      marginBottom: Spacing.sm,
+      fontWeight: '600' as '600',
+    },
+    profileListContainer: {
+      marginBottom: Spacing.md,
+    },
+    profileRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: Spacing.sm,
+      paddingHorizontal: Spacing.md,
+      borderWidth: 1,
+      borderRadius: BorderRadius.md,
+      marginBottom: Spacing.sm,
+    },
+    profileRowActive: {
+      borderColor: Colors.brand.blue,
+      backgroundColor: Colors.brand.blue + '10',
+    },
+    profileName: {
+      ...Typography.bodyMedium,
+      fontWeight: '600' as '600',
+    },
   chipsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
