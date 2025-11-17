@@ -13,12 +13,15 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
 import { Colors } from '../theme/colors';
 import { Typography, Spacing, BorderRadius } from '../theme/styles';
-import { Card, PageTransition, HeroTransition } from '../components';
+import { Card, PageTransition, HeroTransition, Chip } from '../components';
 import { ScanStackParamList } from '../navigation/types';
 import historyService, { ScanHistory } from '../services/historyService';
 import { MenuItem } from '../services/menuAnalysisService';
+import { useUserProfile } from '../hooks/useUserProfile';
 
 type AnalysisResultScreenRouteProp = RouteProp<ScanStackParamList, 'AnalysisResult'>;
+
+type FilterCategory = 'all' | 'compliant' | 'modifiable' | 'non_compliant';
 
 // Menu item result card (reused from AnalysisScreen)
 const MenuItemCard: React.FC<{ item: MenuItem }> = ({ item }) => {
@@ -95,10 +98,12 @@ export const AnalysisResultScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute<AnalysisResultScreenRouteProp>();
   const { scanId } = route.params;
+  const { profile } = useUserProfile();
 
   const [scan, setScan] = useState<ScanHistory | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [filterCategory, setFilterCategory] = useState<FilterCategory>('all');
 
   useEffect(() => {
     loadScan();
@@ -130,6 +135,22 @@ export const AnalysisResultScreen: React.FC = () => {
     const nonCompliant = scan.items.filter(item => item.classification === 'non_compliant');
 
     return { compliant, modifiable, nonCompliant };
+  };
+
+  const getFilteredItems = () => {
+    const { compliant, modifiable, nonCompliant } = getCategorizedItems();
+    
+    switch (filterCategory) {
+      case 'compliant':
+        return compliant;
+      case 'modifiable':
+        return modifiable;
+      case 'non_compliant':
+        return nonCompliant;
+      case 'all':
+      default:
+        return [...compliant, ...modifiable, ...nonCompliant];
+    }
   };
 
   if (loading) {
@@ -166,6 +187,7 @@ export const AnalysisResultScreen: React.FC = () => {
   }
 
   const { compliant, modifiable, nonCompliant } = getCategorizedItems();
+  const filteredItems = getFilteredItems();
   const scanDate = scan.scanDate?.toDate ? scan.scanDate.toDate() : new Date();
 
   return (
@@ -196,6 +218,27 @@ export const AnalysisResultScreen: React.FC = () => {
               })}
             </Text>
           </View>
+
+          {/* Dietary Preferences */}
+          {profile && (profile.dietaryPresets.length > 0 || profile.customRestrictions.length > 0) && (
+            <Card style={styles.dietaryCard} variant="elevated">
+              <Text style={[styles.dietaryTitle, { color: colors.primaryText }]}>
+                Your Dietary Preferences
+              </Text>
+              <View style={styles.dietaryChipsContainer}>
+                {profile.dietaryPresets.map((preset, index) => (
+                  <View key={`preset-${index}`} style={[styles.dietaryChip, { backgroundColor: Colors.brand.blue + '20' }]}>
+                    <Text style={[styles.dietaryChipText, { color: Colors.brand.blue }]}>{preset}</Text>
+                  </View>
+                ))}
+                {profile.customRestrictions.map((restriction, index) => (
+                  <View key={`custom-${index}`} style={[styles.dietaryChip, { backgroundColor: colors.secondaryText + '20' }]}>
+                    <Text style={[styles.dietaryChipText, { color: colors.primaryText }]}>{restriction}</Text>
+                  </View>
+                ))}
+              </View>
+            </Card>
+          )}
 
           {/* Results Summary */}
           <View style={styles.summaryContainer}>
@@ -234,41 +277,53 @@ export const AnalysisResultScreen: React.FC = () => {
             </View>
           </View>
 
-          {/* Menu Items by Category */}
-          {compliant.length > 0 && (
-            <View style={styles.categorySection}>
-              <Text style={[styles.categoryTitle, { color: Colors.semantic.compliant }]}>
-                Safe to Eat
-              </Text>
-              {compliant.map((item, index) => (
-                <HeroTransition key={`compliant-${index}`} delay={index * 80} duration={500}>
+          {/* Filter Chips */}
+          <View style={styles.filterContainer}>
+            <Text style={[styles.filterTitle, { color: colors.primaryText }]}>Filter by Category</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterChipsScroll}>
+              <Chip
+                label="All Items"
+                selected={filterCategory === 'all'}
+                onPress={() => setFilterCategory('all')}
+                variant="filter"
+              />
+              <Chip
+                label={`Safe to Eat (${compliant.length})`}
+                selected={filterCategory === 'compliant'}
+                onPress={() => setFilterCategory('compliant')}
+                variant="filter"
+              />
+              <Chip
+                label={`Can Modify (${modifiable.length})`}
+                selected={filterCategory === 'modifiable'}
+                onPress={() => setFilterCategory('modifiable')}
+                variant="filter"
+              />
+              <Chip
+                label={`Restricted (${nonCompliant.length})`}
+                selected={filterCategory === 'non_compliant'}
+                onPress={() => setFilterCategory('non_compliant')}
+                variant="filter"
+              />
+            </ScrollView>
+          </View>
+
+          {/* Filtered Menu Items */}
+          <View style={styles.itemsContainer}>
+            {filteredItems.length > 0 ? (
+              filteredItems.map((item, index) => (
+                <HeroTransition key={`item-${index}`} delay={index * 50} duration={400}>
                   <MenuItemCard item={item} />
                 </HeroTransition>
-              ))}
-            </View>
-          )}
-
-          {modifiable.length > 0 && (
-            <View style={styles.categorySection}>
-              <Text style={[styles.categoryTitle, { color: Colors.semantic.modifiable }]}>
-                Can Be Modified
-              </Text>
-              {modifiable.map((item, index) => (
-                <MenuItemCard key={`modifiable-${index}`} item={item} />
-              ))}
-            </View>
-          )}
-
-          {nonCompliant.length > 0 && (
-            <View style={styles.categorySection}>
-              <Text style={[styles.categoryTitle, { color: Colors.semantic.nonCompliant }]}>
-                Contains Restrictions
-              </Text>
-              {nonCompliant.map((item, index) => (
-                <MenuItemCard key={`non-compliant-${index}`} item={item} />
-              ))}
-            </View>
-          )}
+              ))
+            ) : (
+              <Card style={styles.emptyCard} variant="elevated">
+                <Text style={[styles.emptyText, { color: colors.secondaryText }]}>
+                  No items in this category
+                </Text>
+              </Card>
+            )}
+          </View>
         </ScrollView>
       </SafeAreaView>
     </PageTransition>
@@ -403,6 +458,54 @@ const styles = StyleSheet.create({
   menuItemReason: {
     ...Typography.bodySmall,
     marginTop: Spacing.xs,
+  },
+  dietaryCard: {
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+    padding: Spacing.md,
+  },
+  dietaryTitle: {
+    ...Typography.bodyMedium,
+    fontWeight: '600' as '600',
+    marginBottom: Spacing.sm,
+  },
+  dietaryChipsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  dietaryChip: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.sm,
+    marginRight: Spacing.xs,
+    marginBottom: Spacing.xs,
+  },
+  dietaryChipText: {
+    ...Typography.caption,
+    fontWeight: '500' as '500',
+  },
+  filterContainer: {
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+  },
+  filterTitle: {
+    ...Typography.bodyMedium,
+    fontWeight: '600' as '600',
+    marginBottom: Spacing.sm,
+  },
+  filterChipsScroll: {
+    flexDirection: 'row',
+  },
+  itemsContainer: {
+    paddingHorizontal: Spacing.lg,
+  },
+  emptyCard: {
+    padding: Spacing.xl,
+    alignItems: 'center',
+  },
+  emptyText: {
+    ...Typography.body,
+    textAlign: 'center',
   },
 });
 
