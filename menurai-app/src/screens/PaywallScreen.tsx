@@ -58,7 +58,7 @@ export const PaywallScreen: React.FC = () => {
   const route = useRoute<PaywallScreenRouteProp>();
   const context = route.params?.context || 'scanLimit';
   const { user } = useAuth();
-  const { profile, isPremiumUser } = useUserProfile();
+  const { userData, isPremiumUser } = useUserProfile();
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<PlanType>('monthly');
 
@@ -127,25 +127,25 @@ export const PaywallScreen: React.FC = () => {
       const response = await createSubscription({ planId: PLAN_IDS[selectedPlan] });
       const data = response.data;
 
-      if (!data?.subscriptionId || !data?.keyId) {
-        throw new Error('Unable to initiate subscription. Please try again.');
-      }
+        if (!data?.subscriptionId || !data?.keyId) {
+          throw new Error('Unable to initiate subscription. Please try again.');
+        }
 
-      createdSubscriptionId = data.subscriptionId;
+        createdSubscriptionId = data.subscriptionId;
 
-      const options = {
-        key: data.keyId,
-        subscription_id: data.subscriptionId,
-        name: 'Menu Mentor Premium',
-        description: `${selectedPlanDetails.label} plan`,
-        prefill: {
-          email: user?.email ?? profile?.email ?? '',
-          name: user?.displayName ?? profile?.displayName ?? '',
-        },
-        theme: {
-          color: Colors.brand.blue,
-        },
-      };
+        const options = {
+          key: data.keyId,
+          subscription_id: data.subscriptionId,
+          name: 'Menu Mentor Premium',
+          description: `${selectedPlanDetails.label} plan`,
+          prefill: {
+            email: user?.email ?? userData?.email ?? '',
+            name: user?.displayName ?? userData?.displayName ?? '',
+          },
+          theme: {
+            color: Colors.brand.blue,
+          },
+        };
 
       if (Platform.OS === 'web') {
         await openRazorpayCheckout(options);

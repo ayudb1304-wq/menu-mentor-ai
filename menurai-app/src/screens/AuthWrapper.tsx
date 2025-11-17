@@ -11,7 +11,7 @@ interface AuthWrapperProps {
 
 export const AuthWrapper: React.FC<AuthWrapperProps> = ({ children }) => {
   const { user, loading: authLoading } = useAuth();
-  const { profile, loading: profileLoading } = useUserProfile();
+  const { loading: profileLoading } = useUserProfile();
   const { colors } = useTheme();
 
   // Show loading while checking auth state

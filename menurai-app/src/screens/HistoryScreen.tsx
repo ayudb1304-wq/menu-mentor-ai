@@ -31,7 +31,7 @@ type NavigationProp = CompositeNavigationProp<
 export const HistoryScreen: React.FC = () => {
   const { colors } = useTheme();
   const navigation = useNavigation<NavigationProp>();
-  const { profile, isPremiumUser } = useUserProfile();
+  const { isPremiumUser } = useUserProfile();
   const [history, setHistory] = useState<ScanHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);

@@ -39,7 +39,7 @@ type NavigationProp = StackNavigationProp<ScanStackParamList, 'ScanOptions'>;
 export const ScanOptionsScreen: React.FC = () => {
   const { colors } = useTheme();
   const navigation = useNavigation<NavigationProp>();
-  const { canScan, remainingScans, profile, isPremiumUser } = useUserProfile();
+  const { canScan, remainingScans, isPremiumUser } = useUserProfile();
   const [modalVisible, setModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [recentScans, setRecentScans] = useState<ScanHistory[]>([]);

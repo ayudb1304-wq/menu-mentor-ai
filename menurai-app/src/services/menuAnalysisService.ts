@@ -1,8 +1,9 @@
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { doc, getDoc } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
-import { storage, functions, auth } from '../config/firebase';
+import { storage, functions, auth, db } from '../config/firebase';
 import { Platform } from 'react-native';
-import userService from './userService';
+import userService, { UserProfile } from './userService';
 
 export interface MenuItem {
   name: string;
@@ -84,17 +85,30 @@ class MenuAnalysisService {
         throw new Error('User not authenticated');
       }
 
-      // Fetch the user's profile
-      const userProfile = await userService.getUserProfile(user.uid);
-      if (!userProfile) {
-        throw new Error('User profile not found');
-      }
+        // Fetch the user's active profile
+        const userData = await userService.getUserData(user.uid);
+        if (!userData) {
+          throw new Error('User data not found');
+        }
+        if (!userData.activeProfileId) {
+          throw new Error(
+            'No active profile selected. Please go to your profile and create or select one.'
+          );
+        }
 
-      // Format the user profile for the Cloud Function
+        const profileRef = doc(db, 'users', user.uid, 'profiles', userData.activeProfileId);
+        const profileSnap = await getDoc(profileRef);
+        if (!profileSnap.exists()) {
+          throw new Error('Active profile not found. Please select a different profile.');
+        }
+
+        const userProfile = profileSnap.data() as Omit<UserProfile, 'id'>;
+
+        // Format the user profile for the Cloud Function
       // The Cloud Function expects 'diets' and 'restrictions' arrays
       const formattedProfile = {
         diets: userProfile.dietaryPresets || [],
-        restrictions: userProfile.customRestrictions || []
+          restrictions: userProfile.customRestrictions || [],
       };
 
       console.log('Sending request with userProfile:', formattedProfile);

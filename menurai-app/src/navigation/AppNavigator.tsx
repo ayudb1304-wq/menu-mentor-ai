@@ -21,7 +21,7 @@ const Stack = createStackNavigator<RootStackParamList>();
 
 export const AppNavigator: React.FC = () => {
   const { user, loading: authLoading } = useAuth();
-  const { profile, loading: profileLoading } = useUserProfile();
+  const { userData, loading: profileLoading } = useUserProfile();
   const { colors, isDarkMode } = useTheme();
 
   const screenOptions = {
@@ -60,7 +60,7 @@ export const AppNavigator: React.FC = () => {
               component={AuthScreen}
               options={{ headerShown: false }}
             />
-          ) : !profile?.profileComplete ? (
+            ) : !userData?.profileComplete ? (
             // Authenticated but profile not complete
             <Stack.Screen
               name="ProfileSetup"
