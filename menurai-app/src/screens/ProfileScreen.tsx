@@ -21,6 +21,7 @@ import {
   Plus,
   Star,
   AlertCircle,
+  Trash2,
 } from '../components/icons';
 import { useTheme } from '../theme/ThemeContext';
 import { Colors } from '../theme/colors';
@@ -61,6 +62,7 @@ export const ProfileScreen: React.FC = () => {
   } = useUserProfile();
   const navigation = useNavigation<any>();
   const [cancelLoading, setCancelLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const subscriptionStatus = profile?.subscriptionStatus ?? 'free';
   const subscriptionStatusLabel =
@@ -166,6 +168,58 @@ export const ProfileScreen: React.FC = () => {
       console.error('Sign out error:', error);
       Alert.alert('Error', 'Failed to sign out. Please try again.');
     }
+  };
+
+  const requestAccountDeletion = async () => {
+    try {
+      setDeleteLoading(true);
+      if (!user) {
+        throw new Error('You must be signed in to delete your account.');
+      }
+
+      // Import authService dynamically
+      const authServiceModule = await import('../services/authService');
+      const authService = authServiceModule.default;
+
+      await authService.deleteAccount();
+
+      showAlert(
+        'Account Deleted',
+        'Your account has been permanently deleted. All your data has been removed.'
+      );
+    } catch (error: any) {
+      console.error('Delete account error:', error);
+      const errorMessage =
+        (error?.message as string) ??
+        'Unable to delete account. Please try again later.';
+      showAlert('Error', errorMessage);
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    const message =
+      'This action is permanent and cannot be undone. All your data, including your dietary profile, scan history, and subscription information, will be permanently deleted.';
+
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(
+        `Delete Account\n\n${message}\n\nAre you absolutely sure you want to delete your account?`
+      );
+      if (confirmed) {
+        void requestAccountDeletion();
+      }
+      return;
+    }
+
+    Alert.alert('Delete Account', message, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete Account',
+        style: 'destructive',
+        onPress: requestAccountDeletion,
+      },
+    ]);
   };
 
   const appVersion = Constants.expoConfig?.version || '1.0.0';
@@ -417,6 +471,18 @@ export const ProfileScreen: React.FC = () => {
           style={styles.signOutButton}
         />
 
+        {/* Delete Account Button */}
+        <Button
+          title="Delete Account"
+          variant="outline"
+          onPress={handleDeleteAccount}
+          icon={<Trash2 size={18} color={Colors.semantic.nonCompliant} />}
+          fullWidth
+          loading={deleteLoading}
+          style={[styles.deleteButton, { borderColor: Colors.semantic.nonCompliant }]}
+          textStyle={{ color: Colors.semantic.nonCompliant }}
+        />
+
         {/* App Version */}
         <Text style={[styles.version, { color: colors.secondaryText }]}>
           v{appVersion}
@@ -578,6 +644,9 @@ const styles = StyleSheet.create({
   },
   signOutButton: {
     marginTop: Spacing.lg,
+  },
+  deleteButton: {
+    marginTop: Spacing.md,
   },
   version: {
     ...Typography.caption,

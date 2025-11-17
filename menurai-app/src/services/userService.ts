@@ -30,6 +30,7 @@ export interface UserProfile {
   hasUsedFreeEdit: boolean; // Track if user has used their free edit after initial setup
   isPremium: boolean; // Premium subscription status
   scanCount: number; // Track number of scans for freemium users
+  aiConsentGiven: boolean; // Track if user has consented to AI processing of their data
   createdAt: Timestamp;
   updatedAt: Timestamp;
   subscriptionId: string | null;
@@ -141,6 +142,7 @@ class UserService {
           hasUsedFreeEdit: false, // New users haven't used their free edit yet
           isPremium: false, // Default to free tier
           scanCount: 0, // New users start with 0 scans
+          aiConsentGiven: false, // Consent must be explicitly given during profile setup
           createdAt: serverTimestamp() as Timestamp,
           updatedAt: serverTimestamp() as Timestamp,
           subscriptionId: null,
@@ -167,7 +169,8 @@ class UserService {
   async updateDietaryPreferences(
     uid: string,
     dietaryPresets: string[],
-    customRestrictions: string[]
+    customRestrictions: string[],
+    aiConsentGiven?: boolean
   ): Promise<void> {
     try {
       const userRef = doc(db, 'users', uid);
@@ -184,6 +187,11 @@ class UserService {
         profileComplete: true,
         updatedAt: serverTimestamp(),
       };
+
+      // Update AI consent if provided (for initial setup)
+      if (aiConsentGiven !== undefined) {
+        updates.aiConsentGiven = aiConsentGiven;
+      }
 
       // Handle free edit logic
       if (profile?.profileComplete) {
