@@ -259,6 +259,12 @@ Return *nothing* but the single, valid JSON object in this exact format:
     const result = await model.generateContent({
       contents: [{role: "user", parts: [{text: systemPrompt}]}],
       safetySettings,
+      // THE 200 IQ FIX:
+      // Force the model to be deterministic. No creativity.
+      // 0 = "logic mode", >0 = "creative mode"
+      generationConfig: {
+        temperature: 0,
+      },
     });
 
     // Extract the JSON text from the response
