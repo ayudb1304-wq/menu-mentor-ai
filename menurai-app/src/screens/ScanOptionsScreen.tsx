@@ -33,6 +33,7 @@ import {
 } from '../components';
 import historyService, { ScanHistory } from '../services/historyService';
 import { useUserProfile } from '../hooks/useUserProfile';
+import { getErrorMessage, isRetryableError } from '../utils/errorMessages';
 
 type NavigationProp = StackNavigationProp<ScanStackParamList, 'ScanOptions'>;
 
@@ -61,6 +62,7 @@ export const ScanOptionsScreen: React.FC = () => {
       setRecentScans(scans.slice(0, 3)); // Show only 3 most recent scans
     } catch (error) {
       console.error('Error loading recent scans:', error);
+      // Don't show alert for background loading errors, just log them
     } finally {
       setLoadingRecent(false);
     }
@@ -124,9 +126,17 @@ export const ScanOptionsScreen: React.FC = () => {
           imageUri: result.assets[0].uri,
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error taking photo:', error);
-      Alert.alert('Error', 'Failed to take photo. Please try again.');
+      const errorInfo = getErrorMessage(error, { 
+        operation: 'taking photo',
+        retryable: isRetryableError(error),
+      });
+      Alert.alert(
+        errorInfo.title,
+        errorInfo.message,
+        errorInfo.action === 'Retry' ? [{ text: 'Retry', onPress: handleTakePhoto }] : [{ text: 'OK' }]
+      );
     } finally {
       setIsLoading(false);
     }
@@ -158,9 +168,17 @@ export const ScanOptionsScreen: React.FC = () => {
           imageUri: result.assets[0].uri,
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error selecting image:', error);
-      Alert.alert('Error', 'Failed to select image. Please try again.');
+      const errorInfo = getErrorMessage(error, { 
+        operation: 'selecting image',
+        retryable: isRetryableError(error),
+      });
+      Alert.alert(
+        errorInfo.title,
+        errorInfo.message,
+        errorInfo.action === 'Retry' ? [{ text: 'Retry', onPress: handleSelectFromGallery }] : [{ text: 'OK' }]
+      );
     } finally {
       setIsLoading(false);
     }

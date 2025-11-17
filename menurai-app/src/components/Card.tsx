@@ -129,6 +129,9 @@ export const Card: React.FC<CardProps> = ({
             styles.pressableContent,
             pressed && styles.pressed,
           ]}
+          accessibilityRole="button"
+          accessibilityLabel={props.accessibilityLabel}
+          accessibilityHint={props.accessibilityHint}
           {...props}
         >
           {children}

@@ -30,3 +30,4 @@ export { HeroTransition, SharedElement, RevealAnimation } from './HeroTransition
 export { EmptyState, NoResults, ErrorState } from './EmptyState';
 export { PressableWithFeedback, ShakeAnimation, SuccessCheckmark } from './MicroInteractions';
 export { EnhancedRefresh, CustomRefreshIndicator } from './EnhancedRefresh';
+export { NetworkStatusBar } from './NetworkStatusBar';

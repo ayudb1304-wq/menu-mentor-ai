@@ -15,7 +15,7 @@ import { ContactSupportScreen } from '../screens/ContactSupportScreen';
 import { RootStackParamList } from './types';
 import { useTheme } from '../theme/ThemeContext';
 import { Colors } from '../theme/colors';
-import { AppHeader } from '../components';
+import { AppHeader, NetworkStatusBar } from '../components';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -51,6 +51,7 @@ export const AppNavigator: React.FC = () => {
 
   return (
     <NavigationContainer>
+      <NetworkStatusBar />
       <AuthWrapper>
         <Stack.Navigator screenOptions={screenOptions}>
           {!user ? (

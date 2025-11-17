@@ -261,6 +261,10 @@ export const Button: React.FC<ButtonProps> = ({
           activeOpacity={0.9}
           onPressIn={handlePressIn}
           onPressOut={handlePressOut}
+          accessibilityRole="button"
+          accessibilityLabel={props.accessibilityLabel || title}
+          accessibilityState={{ disabled: disabled || loading }}
+          accessibilityHint={props.accessibilityHint}
           {...props}
         >
           <GradientView
@@ -284,6 +288,10 @@ export const Button: React.FC<ButtonProps> = ({
         activeOpacity={0.7}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
+        accessibilityRole="button"
+        accessibilityLabel={props.accessibilityLabel || title}
+        accessibilityState={{ disabled: disabled || loading }}
+        accessibilityHint={props.accessibilityHint}
         {...props}
       >
         {renderContent()}
