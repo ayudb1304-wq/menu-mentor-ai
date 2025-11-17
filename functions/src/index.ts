@@ -466,6 +466,33 @@ export const abortPendingSubscription = onCall(
   }
 );
 
+export const deleteUserAccount = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) {
+    throw new HttpsError("unauthenticated", "User must be authenticated.");
+  }
+
+  try {
+    logger.info("Account deletion requested", {uid});
+
+    // Delete user's Firestore document
+    await db.collection("users").doc(uid).delete();
+    logger.info("Firestore user document deleted", {uid});
+
+    // Delete user's auth record
+    await admin.auth().deleteUser(uid);
+    logger.info("Firebase Auth user deleted", {uid});
+
+    return {message: "Account successfully deleted."};
+  } catch (error) {
+    logger.error("Failed to delete user account", {uid, error});
+    throw new HttpsError(
+      "internal",
+      error instanceof Error ? error.message : "Failed to delete account."
+    );
+  }
+});
+
 export const razorpayWebhookHandler = onRequest(
   {timeoutSeconds: 60, secrets: [razorpayKeyId, razorpayKeySecret, razorpayWebhookSecret]},
   async (request, response) => {

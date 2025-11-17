@@ -9,8 +9,9 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  TouchableOpacity,
 } from 'react-native';
-import { Info } from '../components/icons';
+import { Info, CheckSquare, Square } from '../components/icons';
 import { useTheme } from '../theme/ThemeContext';
 import { Colors } from '../theme/colors';
 import { Typography, Spacing, BorderRadius } from '../theme/styles';
@@ -42,6 +43,7 @@ export const ProfileSetupScreen: React.FC = () => {
   const [customRestriction, setCustomRestriction] = useState('');
   const [customRestrictions, setCustomRestrictions] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [aiConsentGiven, setAiConsentGiven] = useState(false);
 
   // Initialize with existing profile data in edit mode
   useEffect(() => {
@@ -96,9 +98,24 @@ export const ProfileSetupScreen: React.FC = () => {
       return;
     }
 
+    // Check AI consent for new users (not in edit mode)
+    if (!isEditMode && !aiConsentGiven) {
+      Alert.alert(
+        'AI Consent Required',
+        'You must consent to AI processing to use Menu Mentor. This allows us to analyze menu images and provide personalized recommendations.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
     setIsSaving(true);
     try {
-      await updateDietaryPreferences(selectedPresets, customRestrictions);
+      // Only pass aiConsentGiven during initial setup
+      await updateDietaryPreferences(
+        selectedPresets,
+        customRestrictions,
+        !isEditMode ? aiConsentGiven : undefined
+      );
 
       if (isEditMode) {
         navigation.goBack();
@@ -241,6 +258,41 @@ export const ProfileSetupScreen: React.FC = () => {
             )}
           </Card>
 
+          {/* AI Consent Notice (only for new users) */}
+          {!isEditMode && (
+            <Card style={[styles.consentCard, { backgroundColor: Colors.brand.blue + '10' }]}>
+              <View style={styles.consentHeader}>
+                <Info size={20} color={Colors.brand.blue} />
+                <Text style={[styles.consentTitle, { color: colors.primaryText }]}>
+                  AI Data Processing Consent
+                </Text>
+              </View>
+              <Text style={[styles.consentDescription, { color: colors.secondaryText }]}>
+                Menu Mentor uses Google's AI (Gemini) to analyze menu images and provide personalized dietary recommendations. By using this app, your dietary profile and uploaded menu images will be processed by Google's AI services.
+              </Text>
+              <TouchableOpacity
+                style={styles.consentCheckbox}
+                onPress={() => setAiConsentGiven(!aiConsentGiven)}
+                activeOpacity={0.7}
+              >
+                {aiConsentGiven ? (
+                  <CheckSquare size={24} color={Colors.brand.blue} />
+                ) : (
+                  <Square size={24} color={colors.border} />
+                )}
+                <Text
+                  style={[
+                    styles.consentCheckboxText,
+                    { color: colors.primaryText },
+                    aiConsentGiven && { fontWeight: '600' },
+                  ]}
+                >
+                  I understand and consent to my dietary profile and menu images being processed by Google's AI to provide personalized analysis
+                </Text>
+              </TouchableOpacity>
+            </Card>
+          )}
+
           {/* Action Buttons */}
           <View style={styles.actions}>
             <Button
@@ -348,5 +400,34 @@ const styles = StyleSheet.create({
     ...Typography.bodySmall,
     marginLeft: Spacing.sm,
     flex: 1,
+  },
+  consentCard: {
+    marginBottom: Spacing.lg,
+    padding: Spacing.lg,
+  },
+  consentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+  },
+  consentTitle: {
+    ...Typography.h6,
+    marginLeft: Spacing.sm,
+    fontWeight: '600' as '600',
+  },
+  consentDescription: {
+    ...Typography.bodySmall,
+    marginBottom: Spacing.md,
+    lineHeight: 20,
+  },
+  consentCheckbox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  consentCheckboxText: {
+    ...Typography.bodySmall,
+    marginLeft: Spacing.sm,
+    flex: 1,
+    lineHeight: 20,
   },
 });

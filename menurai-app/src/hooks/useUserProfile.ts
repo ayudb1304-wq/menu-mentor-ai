@@ -14,7 +14,8 @@ interface UseUserProfileReturn {
   isPremiumUser: boolean;
   updateDietaryPreferences: (
     dietaryPresets: string[],
-    customRestrictions: string[]
+    customRestrictions: string[],
+    aiConsentGiven?: boolean
   ) => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -61,7 +62,8 @@ export const useUserProfile = (): UseUserProfileReturn => {
 
   const updateDietaryPreferences = async (
     dietaryPresets: string[],
-    customRestrictions: string[]
+    customRestrictions: string[],
+    aiConsentGiven?: boolean
   ): Promise<void> => {
     if (!user) {
       throw new Error('User not authenticated');
@@ -73,7 +75,8 @@ export const useUserProfile = (): UseUserProfileReturn => {
       await userService.updateDietaryPreferences(
         user.uid,
         dietaryPresets,
-        customRestrictions
+        customRestrictions,
+        aiConsentGiven
       );
     } catch (err: any) {
       setError(err);

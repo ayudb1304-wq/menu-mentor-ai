@@ -131,6 +131,36 @@ class AuthService {
   }
 
   /**
+   * Delete the current user's account
+   * This will delete both Firebase Auth and Firestore data
+   */
+  async deleteAccount(): Promise<void> {
+    try {
+      const currentUser = this.getCurrentUser();
+      if (!currentUser) {
+        throw new Error('No user is currently signed in');
+      }
+
+      // Import functions dynamically to avoid circular dependencies
+      const { functions } = await import('../config/firebase');
+      const { httpsCallable } = await import('firebase/functions');
+
+      // Call the Cloud Function to delete the account
+      const deleteUserAccount = httpsCallable<void, { message: string }>(
+        functions,
+        'deleteUserAccount'
+      );
+      await deleteUserAccount();
+
+      // Sign out after successful deletion
+      await this.signOut();
+    } catch (error: any) {
+      console.error('Error deleting account:', error);
+      throw this.handleAuthError(error);
+    }
+  }
+
+  /**
    * Listen to authentication state changes
    */
   onAuthStateChanged(callback: (user: User | null) => void) {
