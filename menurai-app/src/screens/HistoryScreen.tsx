@@ -33,7 +33,7 @@ type NavigationProp = CompositeNavigationProp<
 export const HistoryScreen: React.FC = () => {
   const { colors } = useTheme();
   const navigation = useNavigation<NavigationProp>();
-  const { profile, isPremiumUser } = useUserProfile();
+  const { isPremiumUser } = useUserProfile();
   const [history, setHistory] = useState<ScanHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -229,6 +229,12 @@ export const HistoryScreen: React.FC = () => {
                     {item.restaurantName}
                   </Text>
                 )}
+                <View style={styles.profileRow}>
+                  <Text style={[styles.profileLabel, { color: colors.secondaryText }]}>Profile</Text>
+                  <Text style={[styles.profileValue, { color: colors.primaryText }]}>
+                    {item.profileName || 'Primary profile'}
+                  </Text>
+                </View>
               </View>
               <View
                 onStartShouldSetResponder={() => true}
@@ -442,6 +448,20 @@ const styles = StyleSheet.create({
   restaurantName: {
     ...Typography.bodyMedium,
     marginTop: Spacing.xs,
+  },
+  profileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: Spacing.xs,
+  },
+  profileLabel: {
+    ...Typography.caption,
+    textTransform: 'uppercase' as 'uppercase',
+    marginRight: Spacing.xs,
+  },
+  profileValue: {
+    ...Typography.caption,
+    fontWeight: '600' as '600',
   },
   scanStats: {
     flexDirection: 'row',

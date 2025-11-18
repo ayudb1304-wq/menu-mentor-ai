@@ -18,7 +18,6 @@ import { Card, PageTransition, HeroTransition, Chip } from '../components';
 import { ScanStackParamList } from '../navigation/types';
 import historyService, { ScanHistory } from '../services/historyService';
 import { MenuItem } from '../services/menuAnalysisService';
-import { useUserProfile } from '../hooks/useUserProfile';
 
 type AnalysisResultScreenRouteProp = RouteProp<ScanStackParamList, 'AnalysisResult'>;
 
@@ -129,8 +128,6 @@ export const AnalysisResultScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute<AnalysisResultScreenRouteProp>();
   const { scanId } = route.params;
-  const { profile } = useUserProfile();
-
   const [scan, setScan] = useState<ScanHistory | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -220,6 +217,8 @@ export const AnalysisResultScreen: React.FC = () => {
   const { compliant, modifiable, nonCompliant } = getCategorizedItems();
   const filteredItems = getFilteredItems();
   const scanDate = scan.scanDate?.toDate ? scan.scanDate.toDate() : new Date();
+  const profileSnapshot = scan.profileSnapshot ?? null;
+  const profileLabel = scan.profileName || profileSnapshot?.name || 'Primary profile';
 
   return (
     <PageTransition type="slideUp" duration={400}>
@@ -248,21 +247,29 @@ export const AnalysisResultScreen: React.FC = () => {
                 minute: '2-digit',
               })}
             </Text>
+            {profileLabel && (
+              <View style={styles.profileTag}>
+                <Text style={[styles.profileTagLabel, { color: colors.secondaryText }]}>Profile</Text>
+                <Text style={[styles.profileTagValue, { color: colors.primaryText }]}>{profileLabel}</Text>
+              </View>
+            )}
           </View>
 
           {/* Dietary Preferences */}
-          {profile && (profile.dietaryPresets.length > 0 || profile.customRestrictions.length > 0) && (
+          {profileSnapshot &&
+            ((profileSnapshot.dietaryPresets && profileSnapshot.dietaryPresets.length > 0) ||
+              (profileSnapshot.customRestrictions && profileSnapshot.customRestrictions.length > 0)) && (
             <Card style={styles.dietaryCard} variant="elevated">
               <Text style={[styles.dietaryTitle, { color: colors.primaryText }]}>
                 Your Dietary Preferences
               </Text>
               <View style={styles.dietaryChipsContainer}>
-                {profile.dietaryPresets.map((preset, index) => (
+                {profileSnapshot.dietaryPresets?.map((preset, index) => (
                   <View key={`preset-${index}`} style={[styles.dietaryChip, { backgroundColor: Colors.brand.primary + '20' }]}>
                     <Text style={[styles.dietaryChipText, { color: Colors.brand.primary }]}>{preset}</Text>
                   </View>
                 ))}
-                {profile.customRestrictions.map((restriction, index) => (
+                {profileSnapshot.customRestrictions?.map((restriction, index) => (
                   <View key={`custom-${index}`} style={[styles.dietaryChip, { backgroundColor: colors.secondaryText + '20' }]}>
                     <Text style={[styles.dietaryChipText, { color: colors.primaryText }]}>{restriction}</Text>
                   </View>
@@ -511,6 +518,18 @@ const styles = StyleSheet.create({
     marginHorizontal: Spacing.lg,
     marginBottom: Spacing.md,
     padding: Spacing.md,
+  },
+  profileTag: {
+    marginTop: Spacing.sm,
+  },
+  profileTagLabel: {
+    ...Typography.caption,
+    textTransform: 'uppercase' as 'uppercase',
+    letterSpacing: 0.5,
+  },
+  profileTagValue: {
+    ...Typography.bodyMedium,
+    fontWeight: '600' as '600',
   },
   dietaryTitle: {
     ...Typography.bodyMedium,

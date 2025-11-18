@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -16,7 +16,7 @@ import { Colors } from '../theme/colors';
 import { Typography, Spacing, BorderRadius } from '../theme/styles';
 import { Button, Chip, LoadingOverlay, Card } from '../components';
 import { useUserProfile } from '../hooks/useUserProfile';
-import { DIETARY_PRESETS } from '../services/userService';
+import userService, { DIETARY_PRESETS } from '../services/userService';
 import { useNavigation, useRoute, RouteProp, CommonActions } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/types';
@@ -30,34 +30,58 @@ export const ProfileSetupScreen: React.FC = () => {
   const route = useRoute<ProfileSetupScreenRouteProp>();
   const isEditMode = route.params?.isEditMode || false;
   const {
-    profile,
-    canEditDietaryPresets,
-    daysRemainingForEdit,
-    isFreeEdit,
+    profiles,
+    currentProfile,
     updateDietaryPreferences,
+    createProfile,
+    renameProfile,
+    deleteProfile,
     loading,
   } = useUserProfile();
 
+  const isCreateMode = route.params?.mode === 'create';
+
+  const targetProfile = useMemo(() => {
+    if (isCreateMode) return null;
+    if (route.params?.profileId) {
+      return profiles.find((p) => p.id === route.params.profileId) || null;
+    }
+    return currentProfile;
+  }, [profiles, currentProfile, route.params?.profileId, isCreateMode]);
+
+  const [profileName, setProfileName] = useState(route.params?.profileName || targetProfile?.name || '');
   const [selectedPresets, setSelectedPresets] = useState<string[]>([]);
   const [customRestriction, setCustomRestriction] = useState('');
   const [customRestrictions, setCustomRestrictions] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
-
-  // Initialize with existing profile data in edit mode
-  useEffect(() => {
-    if (isEditMode && profile) {
-      setSelectedPresets(profile.dietaryPresets || []);
-      setCustomRestrictions(profile.customRestrictions || []);
+  const { canEdit, daysRemaining, isFreeEdit: profileFreeEdit } = useMemo(() => {
+    if (isCreateMode) {
+      return { canEdit: true, daysRemaining: 0, isFreeEdit: false };
     }
-  }, [isEditMode, profile]);
+    return userService.canEditDietaryPresets(targetProfile ?? null);
+  }, [targetProfile, isCreateMode, route.params?.profileName]);
+
+  useEffect(() => {
+    if (isCreateMode) {
+      setProfileName(route.params?.profileName || '');
+      setSelectedPresets([]);
+      setCustomRestrictions([]);
+      return;
+    }
+    if (targetProfile) {
+      setProfileName(targetProfile.name);
+      setSelectedPresets(targetProfile.dietaryPresets || []);
+      setCustomRestrictions(targetProfile.customRestrictions || []);
+    }
+  }, [targetProfile, isCreateMode]);
 
   const togglePreset = (preset: string) => {
-    if (!canEditDietaryPresets && isEditMode) {
-      const message = isFreeEdit
+    if (!canEdit && isEditMode && !isCreateMode) {
+      const message = profileFreeEdit
         ? 'This is your free edit. After this, dietary preferences will be locked for 30 days.'
-        : `You can edit your dietary preferences in ${daysRemainingForEdit} days.`;
+        : `You can edit your dietary preferences in ${daysRemaining} days.`;
 
-      if (!isFreeEdit) {
+      if (!profileFreeEdit) {
         Alert.alert(
           'Edit Locked',
           message,
@@ -87,6 +111,10 @@ export const ProfileSetupScreen: React.FC = () => {
   };
 
   const handleSave = async () => {
+    if (!profileName.trim()) {
+      Alert.alert('Name Required', 'Please enter a name for this profile.', [{ text: 'OK' }]);
+      return;
+    }
     if (selectedPresets.length === 0 && customRestrictions.length === 0) {
       Alert.alert(
         'Profile Incomplete',
@@ -96,21 +124,38 @@ export const ProfileSetupScreen: React.FC = () => {
       return;
     }
 
+    if (!isCreateMode && !targetProfile) {
+      Alert.alert('Profile unavailable', 'Please wait for the profile to finish loading.');
+      return;
+    }
+
     setIsSaving(true);
     try {
-      await updateDietaryPreferences(selectedPresets, customRestrictions);
-
-      if (isEditMode) {
+      if (isCreateMode) {
+        await createProfile({
+          name: profileName.trim(),
+          dietaryPresets: selectedPresets,
+          customRestrictions,
+        });
         navigation.goBack();
       } else {
-        // For new users, navigate to Home after completing setup
-        // Reset the navigation stack so they can't go back to setup
-        navigation.dispatch(
-          CommonActions.reset({
-            index: 0,
-            routes: [{ name: 'Home' }],
-          })
-        );
+        if (targetProfile) {
+          if (profileName.trim() !== targetProfile.name) {
+            await renameProfile(targetProfile.id, profileName.trim());
+          }
+          await updateDietaryPreferences(selectedPresets, customRestrictions, targetProfile.id);
+        }
+
+        if (isEditMode) {
+          navigation.goBack();
+        } else {
+          navigation.dispatch(
+            CommonActions.reset({
+              index: 0,
+              routes: [{ name: 'Home' }],
+            })
+          );
+        }
       }
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to save preferences', [
@@ -121,18 +166,50 @@ export const ProfileSetupScreen: React.FC = () => {
     }
   };
 
+  const confirmDeleteProfile = () => {
+    if (!targetProfile) return;
+    Alert.alert(
+      'Delete Profile',
+      `Are you sure you want to delete ${targetProfile.name}? This will remove all associated history.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setIsSaving(true);
+              await deleteProfile(targetProfile.id);
+              navigation.goBack();
+            } catch (error: any) {
+              Alert.alert('Error', error?.message || 'Failed to delete profile.');
+            } finally {
+              setIsSaving(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const canSave = () => {
+    if (isCreateMode) {
+      return profileName.trim().length > 0;
+    }
+
     if (!isEditMode) return true;
 
-    // In edit mode, check if presets can be edited
-    if (!canEditDietaryPresets &&
-        JSON.stringify(selectedPresets.sort()) !== JSON.stringify(profile?.dietaryPresets?.sort())) {
+    const nameChanged = profileName.trim() !== (targetProfile?.name || '').trim();
+    const restrictionsChanged =
+      JSON.stringify(customRestrictions.sort()) !== JSON.stringify(targetProfile?.customRestrictions?.sort());
+    const presetsChanged =
+      JSON.stringify(selectedPresets.sort()) !== JSON.stringify(targetProfile?.dietaryPresets?.sort());
+
+    if (!canEdit && (presetsChanged || restrictionsChanged) && !nameChanged) {
       return false;
     }
 
-    // Always allow saving if only restrictions changed
-    return JSON.stringify(customRestrictions.sort()) !== JSON.stringify(profile?.customRestrictions?.sort()) ||
-           JSON.stringify(selectedPresets.sort()) !== JSON.stringify(profile?.dietaryPresets?.sort());
+    return nameChanged || restrictionsChanged || presetsChanged;
   };
 
   return (
@@ -157,7 +234,7 @@ export const ProfileSetupScreen: React.FC = () => {
           )}
 
           {/* Free Edit Notice */}
-          {isEditMode && isFreeEdit && (
+          {isEditMode && profileFreeEdit && !isCreateMode && (
             <View style={[styles.freeEditNotice, { backgroundColor: Colors.brand.primary + '20' }]}>
               <Info size={16} color={Colors.brand.primary} />
               <Text style={[styles.freeEditText, { color: Colors.brand.primary }]}>
@@ -166,15 +243,33 @@ export const ProfileSetupScreen: React.FC = () => {
             </View>
           )}
 
+          <Card style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.primaryText }]}>Profile Name</Text>
+            <TextInput
+              style={[
+                styles.nameInput,
+                {
+                  color: colors.primaryText,
+                  backgroundColor: colors.background,
+                  borderColor: colors.border,
+                },
+              ]}
+              placeholder="e.g., My Gluten Free Plan"
+              placeholderTextColor={colors.secondaryText}
+              value={profileName}
+              onChangeText={setProfileName}
+            />
+          </Card>
+
           {/* Dietary Presets */}
           <Card style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { color: colors.primaryText }]}>
                 Dietary Preferences
               </Text>
-              {isEditMode && !canEditDietaryPresets && (
+              {isEditMode && !canEdit && !isCreateMode && (
                 <Text style={[styles.lockText, { color: Colors.light.warning }]}>
-                  Locked for {daysRemainingForEdit} days
+                  Locked for {daysRemaining} days
                 </Text>
               )}
             </View>
@@ -185,7 +280,7 @@ export const ProfileSetupScreen: React.FC = () => {
                   label={preset}
                   selected={selectedPresets.includes(preset)}
                   onPress={() => togglePreset(preset)}
-                  disabled={isEditMode && !canEditDietaryPresets}
+                  disabled={isEditMode && !canEdit && !isCreateMode}
                 />
               ))}
             </View>
@@ -259,11 +354,20 @@ export const ProfileSetupScreen: React.FC = () => {
                 style={styles.cancelButton}
               />
             )}
+            {isEditMode && !isCreateMode && targetProfile && !targetProfile.isPrimary && (
+              <Button
+                title="Delete Profile"
+                variant="ghost"
+                onPress={confirmDeleteProfile}
+                fullWidth
+                style={styles.cancelButton}
+              />
+            )}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <LoadingOverlay visible={loading} message="Loading profile..." />
+      <LoadingOverlay visible={loading || (!targetProfile && !isCreateMode)} message="Loading profile..." />
     </SafeAreaView>
   );
 };
@@ -278,7 +382,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     padding: Spacing.lg,
-    paddingBottom: Spacing.xl * 2, // Extra padding for bottom actions
+    paddingBottom: Spacing.xxl * 2, // Extra padding for bottom actions to ensure cancel button is visible
   },
   descriptionContainer: {
     marginBottom: Spacing.lg,
@@ -302,6 +406,13 @@ const styles = StyleSheet.create({
   sectionDescription: {
     ...Typography.bodySmall,
     marginBottom: Spacing.md,
+  },
+  nameInput: {
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    ...Typography.body,
   },
   lockText: {
     ...Typography.caption,

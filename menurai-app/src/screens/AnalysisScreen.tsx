@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import { ScanStackParamList } from '../navigation/types';
 import menuAnalysisService, { MenuItem, AnalysisResult } from '../services/menuAnalysisService';
 import historyService from '../services/historyService';
 import { getErrorMessage, isRetryableError } from '../utils/errorMessages';
+import { useUserProfile } from '../hooks/useUserProfile';
 
 type AnalysisScreenRouteProp = RouteProp<ScanStackParamList, 'Analysis'>;
 
@@ -158,24 +159,28 @@ export const AnalysisScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute<AnalysisScreenRouteProp>();
   const { imageUri } = route.params;
+  const { currentProfile } = useUserProfile();
 
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [hasStartedAnalysis, setHasStartedAnalysis] = useState(false);
 
-  useEffect(() => {
-    if (imageUri) {
-      startAnalysis();
+  const startAnalysis = useCallback(async () => {
+    if (!currentProfile) {
+      Alert.alert('Profile Required', 'Select a dietary profile before scanning.');
+      return;
     }
-  }, [imageUri]);
-
-  const startAnalysis = async () => {
+    if (!imageUri) {
+      Alert.alert('Image Required', 'Please select an image to analyze.');
+      return;
+    }
     setIsAnalyzing(true);
     setError(null);
 
     try {
-      const result = await menuAnalysisService.processMenuImage(imageUri);
+      const result = await menuAnalysisService.processMenuImage(imageUri, currentProfile);
       setAnalysisResult(result);
       
       // Show success animation
@@ -208,7 +213,25 @@ export const AnalysisScreen: React.FC = () => {
     } finally {
       setIsAnalyzing(false);
     }
-  };
+  }, [currentProfile, imageUri, navigation]);
+
+  useEffect(() => {
+    // Reset state when imageUri changes (new scan)
+    setHasStartedAnalysis(false);
+    setAnalysisResult(null);
+    setError(null);
+  }, [imageUri]);
+
+  useEffect(() => {
+    // Only start analysis if we have both imageUri and currentProfile, and haven't started yet
+    if (imageUri && currentProfile && !hasStartedAnalysis && !isAnalyzing && !analysisResult) {
+      setHasStartedAnalysis(true);
+      startAnalysis();
+    } else if (imageUri && !currentProfile && !hasStartedAnalysis) {
+      // If we have imageUri but no profile yet, wait for profile to load
+      console.log('Waiting for profile to load before starting analysis...');
+    }
+  }, [imageUri, currentProfile, hasStartedAnalysis, isAnalyzing, analysisResult, startAnalysis]);
 
   const getCategorizedItems = () => {
     if (!analysisResult?.items) return { compliant: [], modifiable: [], nonCompliant: [] };

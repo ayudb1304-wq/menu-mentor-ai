@@ -1,14 +1,20 @@
 import {
+  collection,
   doc,
   getDoc,
-  setDoc,
-  updateDoc,
+  getDocs,
+  limit,
   onSnapshot,
-  Timestamp,
+  orderBy,
+  query,
   serverTimestamp,
+  setDoc,
+  Timestamp,
+  updateDoc,
 } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { httpsCallable } from 'firebase/functions';
 import { User } from 'firebase/auth';
+import { db, functions } from '../config/firebase';
 
 export type SubscriptionStatus =
   | 'free'
@@ -24,18 +30,39 @@ export interface UserProfile {
   displayName: string;
   photoURL: string | null;
   profileComplete: boolean;
-  dietaryPresets: string[];
-  customRestrictions: string[];
-  lastDietUpdate: Timestamp | null;
-  hasUsedFreeEdit: boolean; // Track if user has used their free edit after initial setup
-  isPremium: boolean; // Premium subscription status
-  scanCount: number; // Track number of scans for freemium users
+  isPremium: boolean;
+  scanCount: number;
   createdAt: Timestamp;
   updatedAt: Timestamp;
   subscriptionId: string | null;
   subscriptionStatus: SubscriptionStatus;
   planId: string | null;
   validUntil: Timestamp | null;
+  primaryProfileId?: string | null;
+  currentProfileId?: string | null;
+}
+
+export interface DietaryProfile {
+  id: string;
+  name: string;
+  avatarColor?: string | null;
+  emoji?: string | null;
+  dietaryPresets: string[];
+  customRestrictions: string[];
+  profileComplete: boolean;
+  hasUsedFreeEdit: boolean;
+  lastDietUpdate: Timestamp | null;
+  isPrimary: boolean;
+  createdAt: Timestamp | null;
+  updatedAt: Timestamp | null;
+}
+
+export interface ProfileInput {
+  name: string;
+  dietaryPresets: string[];
+  customRestrictions: string[];
+  avatarColor?: string | null;
+  emoji?: string | null;
 }
 
 export const DIETARY_PRESETS = [
@@ -47,6 +74,9 @@ export const DIETARY_PRESETS = [
   'Keto',
   'Paleo',
 ] as const;
+
+const PROFILE_COLLECTION = 'profiles';
+const MAX_PROFILES = 4; // 1 primary + 3 additional
 
 class UserService {
   private isValidSubscriptionStatus(status: any): status is SubscriptionStatus {
@@ -79,6 +109,8 @@ class UserService {
       subscriptionStatus,
       validUntil,
       isPremium: this.computeIsPremium(subscriptionStatus, validUntil),
+      primaryProfileId: data?.primaryProfileId ?? null,
+      currentProfileId: data?.currentProfileId ?? null,
     };
 
     return normalized;
@@ -87,6 +119,84 @@ class UserService {
   private isPremiumUser(profile: UserProfile | null): boolean {
     if (!profile) return false;
     return this.computeIsPremium(profile.subscriptionStatus, profile.validUntil);
+  }
+
+  private profilesRef(uid: string) {
+    return collection(doc(db, 'users', uid), PROFILE_COLLECTION);
+  }
+
+  private normalizeDietaryProfile(id: string, data: any): DietaryProfile {
+    return {
+      id,
+      name: data?.name || 'Profile',
+      avatarColor: data?.avatarColor ?? null,
+      emoji: data?.emoji ?? null,
+      dietaryPresets: Array.isArray(data?.dietaryPresets) ? data.dietaryPresets : [],
+      customRestrictions: Array.isArray(data?.customRestrictions) ? data.customRestrictions : [],
+      profileComplete: !!data?.profileComplete,
+      hasUsedFreeEdit: !!data?.hasUsedFreeEdit,
+      lastDietUpdate: data?.lastDietUpdate ?? null,
+      isPrimary: !!data?.isPrimary,
+      createdAt: data?.createdAt ?? null,
+      updatedAt: data?.updatedAt ?? null,
+    };
+  }
+
+  private async ensurePrimaryProfile(uid: string, account: UserProfile | null): Promise<DietaryProfile | null> {
+    const primaryQuery = query(this.profilesRef(uid), orderBy('createdAt', 'asc'), limit(1));
+    const snapshot = await getDocs(primaryQuery);
+
+    if (!snapshot.empty) {
+      const docSnap = snapshot.docs[0];
+      return this.normalizeDietaryProfile(docSnap.id, docSnap.data());
+    }
+
+    if (!account) {
+      return null;
+    }
+
+    const profileRef = doc(this.profilesRef(uid));
+    const now = serverTimestamp();
+
+    await setDoc(profileRef, {
+      name: account.displayName || 'Primary Profile',
+      avatarColor: null,
+      emoji: null,
+      dietaryPresets: [],
+      customRestrictions: [],
+      profileComplete: !!account.profileComplete,
+      hasUsedFreeEdit: false,
+      lastDietUpdate: null,
+      isPrimary: true,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await updateDoc(doc(db, 'users', uid), {
+      primaryProfileId: profileRef.id,
+      currentProfileId: profileRef.id,
+      updatedAt: now,
+    });
+
+    return this.normalizeDietaryProfile(profileRef.id, {
+      name: account.displayName || 'Primary Profile',
+      dietaryPresets: [],
+      customRestrictions: [],
+      profileComplete: !!account.profileComplete,
+      hasUsedFreeEdit: false,
+      lastDietUpdate: null,
+      isPrimary: true,
+    });
+  }
+
+  private enforceProfileLimit(isPremium: boolean, profileCount: number) {
+    if (!isPremium && profileCount >= 1) {
+      throw new Error('Additional profiles are available to premium members.');
+    }
+
+    if (profileCount >= MAX_PROFILES) {
+      throw new Error('You have reached the maximum number of profiles.');
+    }
   }
 
   /**
@@ -135,10 +245,6 @@ class UserService {
           displayName: user.displayName || '',
           photoURL: user.photoURL,
           profileComplete: false,
-          dietaryPresets: [],
-          customRestrictions: [],
-          lastDietUpdate: null,
-          hasUsedFreeEdit: false, // New users haven't used their free edit yet
           isPremium: false, // Default to free tier
           scanCount: 0, // New users start with 0 scans
           createdAt: serverTimestamp() as Timestamp,
@@ -149,6 +255,7 @@ class UserService {
           validUntil: null,
         };
         await setDoc(userRef, newProfile);
+        await this.ensurePrimaryProfile(user.uid, newProfile as UserProfile);
         const createdProfile = await this.getUserProfile(user.uid);
         if (!createdProfile) {
           throw new Error('Failed to load user profile after creation');
@@ -166,39 +273,45 @@ class UserService {
    */
   async updateDietaryPreferences(
     uid: string,
+    profileId: string,
     dietaryPresets: string[],
     customRestrictions: string[]
   ): Promise<void> {
     try {
-      const userRef = doc(db, 'users', uid);
-      const profile = await this.getUserProfile(uid);
+      const profileRef = doc(this.profilesRef(uid), profileId);
+      const snapshot = await getDoc(profileRef);
 
-      // Check if dietary presets are being changed
+      if (!snapshot.exists()) {
+        throw new Error('Profile not found');
+      }
+
+      const currentProfile = this.normalizeDietaryProfile(profileId, snapshot.data());
       const presetsChanged =
-        JSON.stringify(profile?.dietaryPresets?.sort()) !==
-        JSON.stringify(dietaryPresets.sort());
+        JSON.stringify(currentProfile.dietaryPresets?.sort()) !== JSON.stringify(dietaryPresets.sort());
 
-      const updates: any = {
+      const updates: Record<string, any> = {
         dietaryPresets,
         customRestrictions,
         profileComplete: true,
         updatedAt: serverTimestamp(),
       };
 
-      // Handle free edit logic
-      if (profile?.profileComplete) {
-        // This is an edit after initial setup
-        if (!profile.hasUsedFreeEdit) {
-          // This is the free edit - mark it as used but don't set lastDietUpdate
+      if (currentProfile.profileComplete) {
+        if (!currentProfile.hasUsedFreeEdit) {
           updates.hasUsedFreeEdit = true;
         } else if (presetsChanged) {
-          // Free edit already used, apply 30-day lock for future edits
           updates.lastDietUpdate = serverTimestamp();
         }
       }
-      // If profile not complete, this is initial setup - no restrictions
 
-      await updateDoc(userRef, updates);
+      await updateDoc(profileRef, updates);
+
+      if (currentProfile.isPrimary && !currentProfile.profileComplete) {
+        await updateDoc(doc(db, 'users', uid), {
+          profileComplete: true,
+          updatedAt: serverTimestamp(),
+        });
+      }
     } catch (error) {
       console.error('Error updating dietary preferences:', error);
       throw error;
@@ -211,7 +324,7 @@ class UserService {
    * - First edit after setup: always allowed (free edit)
    * - Subsequent edits: 30-day lock applies
    */
-  canEditDietaryPresets(profile: UserProfile | null): {
+  canEditDietaryPresets(profile: DietaryProfile | null): {
     canEdit: boolean;
     daysRemaining: number;
     isFreeEdit: boolean;
@@ -311,6 +424,144 @@ class UserService {
         callback(null);
       }
     );
+  }
+
+  private async ensureSinglePrimaryProfile(uid: string, profiles: DietaryProfile[]): Promise<void> {
+    const primaryProfiles = profiles.filter(p => p.isPrimary);
+    
+    if (primaryProfiles.length <= 1) {
+      return; // Already correct
+    }
+
+    // Sort by createdAt to find the oldest one
+    const sortedPrimary = primaryProfiles.sort((a, b) => {
+      const aTime = a.createdAt?.toMillis() || 0;
+      const bTime = b.createdAt?.toMillis() || 0;
+      return aTime - bTime;
+    });
+
+    // Keep the first one as primary, remove primary flag from others
+    const keepPrimary = sortedPrimary[0];
+    const removePrimary = sortedPrimary.slice(1);
+
+    // Update profiles to remove primary flag from duplicates
+    const batch = removePrimary.map(profile => 
+      updateDoc(doc(this.profilesRef(uid), profile.id), {
+        isPrimary: false,
+        updatedAt: serverTimestamp(),
+      })
+    );
+
+    await Promise.all(batch);
+    console.log(`Fixed multiple primary profiles: kept ${keepPrimary.name} as primary, removed primary flag from ${removePrimary.length} profile(s)`);
+  }
+
+  subscribeToProfiles(uid: string, callback: (profiles: DietaryProfile[]) => void) {
+    const profilesQuery = query(this.profilesRef(uid), orderBy('createdAt', 'asc'));
+    return onSnapshot(
+      profilesQuery,
+      async (snapshot) => {
+        if (snapshot.empty) {
+          const account = await this.getUserProfile(uid);
+          const seeded = await this.ensurePrimaryProfile(uid, account);
+          callback(seeded ? [seeded] : []);
+          return;
+        }
+        const profiles = snapshot.docs.map((docSnap) => this.normalizeDietaryProfile(docSnap.id, docSnap.data()));
+        
+        // Fix multiple primary profiles if they exist (fire and forget - will trigger another snapshot)
+        this.ensureSinglePrimaryProfile(uid, profiles).catch(err => {
+          console.error('Error fixing multiple primary profiles:', err);
+        });
+        
+        // Return profiles immediately (fix will apply on next snapshot)
+        callback(profiles);
+      },
+      (error) => {
+        console.error('Error listening to dietary profiles:', error);
+        callback([]);
+      }
+    );
+  }
+
+  async getDietaryProfiles(uid: string): Promise<DietaryProfile[]> {
+    const snapshot = await getDocs(query(this.profilesRef(uid), orderBy('createdAt', 'asc')));
+    if (snapshot.empty) {
+      const account = await this.getUserProfile(uid);
+      const seeded = await this.ensurePrimaryProfile(uid, account);
+      return seeded ? [seeded] : [];
+    }
+    const profiles = snapshot.docs.map((docSnap) => this.normalizeDietaryProfile(docSnap.id, docSnap.data()));
+    
+    // Fix multiple primary profiles if they exist
+    await this.ensureSinglePrimaryProfile(uid, profiles);
+    
+    // Return profiles with corrected primary flags (fix updates Firestore, but we return corrected array)
+    const primaryProfiles = profiles.filter(p => p.isPrimary);
+    if (primaryProfiles.length > 1) {
+      // Sort by createdAt and keep only the oldest as primary
+      const sortedPrimary = primaryProfiles.sort((a, b) => {
+        const aTime = a.createdAt?.toMillis() || 0;
+        const bTime = b.createdAt?.toMillis() || 0;
+        return aTime - bTime;
+      });
+      // Update the array in memory to reflect the fix
+      profiles.forEach(p => {
+        if (p.id !== sortedPrimary[0].id && p.isPrimary) {
+          p.isPrimary = false;
+        }
+      });
+    }
+    
+    return profiles;
+  }
+
+  async setCurrentProfile(uid: string, profileId: string): Promise<void> {
+    await updateDoc(doc(db, 'users', uid), {
+      currentProfileId: profileId,
+      updatedAt: serverTimestamp(),
+    });
+  }
+
+  async createDietaryProfile(uid: string, input: ProfileInput, account: UserProfile): Promise<void> {
+    const profiles = await this.getDietaryProfiles(uid);
+    this.enforceProfileLimit(this.isPremiumUser(account), profiles.length);
+
+    const profileRef = doc(this.profilesRef(uid));
+    const now = serverTimestamp();
+
+    await setDoc(profileRef, {
+      name: input.name,
+      avatarColor: input.avatarColor ?? null,
+      emoji: input.emoji ?? null,
+      dietaryPresets: input.dietaryPresets ?? [],
+      customRestrictions: input.customRestrictions ?? [],
+      profileComplete: true,
+      hasUsedFreeEdit: false,
+      lastDietUpdate: null,
+      isPrimary: false,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await this.setCurrentProfile(uid, profileRef.id);
+  }
+
+  async deleteDietaryProfile(profileId: string): Promise<void> {
+    const callable = httpsCallable(functions, 'deleteUserProfileData');
+    await callable({ profileId });
+  }
+
+  async renameDietaryProfile(uid: string, profileId: string, name: string): Promise<void> {
+    await updateDoc(doc(this.profilesRef(uid), profileId), {
+      name,
+      updatedAt: serverTimestamp(),
+    });
+  }
+
+  async deleteAccountData(): Promise<void> {
+    const callable = httpsCallable(functions, 'deleteAccountData');
+    await callable();
   }
 }
 

@@ -2,7 +2,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { httpsCallable } from 'firebase/functions';
 import { storage, functions, auth } from '../config/firebase';
 import { Platform } from 'react-native';
-import userService from './userService';
+import { DietaryProfile } from './userService';
 
 export interface MenuItem {
   name: string;
@@ -21,6 +21,13 @@ export interface AnalysisResult {
   imageUrl?: string; // gs:// URL for Cloud Function
   downloadUrl?: string; // Download URL for display
   timestamp?: Date;
+  profileId: string;
+  profileName: string;
+  profileSnapshot: {
+    name: string;
+    dietaryPresets: string[];
+    customRestrictions: string[];
+  };
 }
 
 class MenuAnalysisService {
@@ -74,7 +81,7 @@ class MenuAnalysisService {
   /**
    * Analyze menu using Cloud Function
    */
-  async analyzeMenu(gsUrl: string, downloadUrl: string): Promise<AnalysisResult> {
+  async analyzeMenu(gsUrl: string, downloadUrl: string, profile: DietaryProfile): Promise<AnalysisResult> {
     try {
       console.log('Calling analyzeMenu Cloud Function...');
 
@@ -84,17 +91,11 @@ class MenuAnalysisService {
         throw new Error('User not authenticated');
       }
 
-      // Fetch the user's profile
-      const userProfile = await userService.getUserProfile(user.uid);
-      if (!userProfile) {
-        throw new Error('User profile not found');
-      }
-
       // Format the user profile for the Cloud Function
       // The Cloud Function expects 'diets' and 'restrictions' arrays
       const formattedProfile = {
-        diets: userProfile.dietaryPresets || [],
-        restrictions: userProfile.customRestrictions || []
+        diets: profile.dietaryPresets || [],
+        restrictions: profile.customRestrictions || []
       };
 
       console.log('Sending request with userProfile:', formattedProfile);
@@ -120,6 +121,13 @@ class MenuAnalysisService {
         imageUrl: gsUrl,
         downloadUrl: downloadUrl,
         timestamp: new Date(),
+        profileId: profile.id,
+        profileName: profile.name,
+        profileSnapshot: {
+          name: profile.name,
+          dietaryPresets: profile.dietaryPresets,
+          customRestrictions: profile.customRestrictions,
+        },
       };
     } catch (error: any) {
       console.error('Error analyzing menu:', error);
@@ -140,13 +148,13 @@ class MenuAnalysisService {
   /**
    * Complete analysis flow: upload and analyze
    */
-  async processMenuImage(imageUri: string): Promise<AnalysisResult> {
+  async processMenuImage(imageUri: string, profile: DietaryProfile): Promise<AnalysisResult> {
     try {
       // Step 1: Upload image (returns both gs:// and download URL)
       const { gsUrl, downloadUrl } = await this.uploadImage(imageUri);
 
       // Step 2: Analyze menu (use gs:// URL for Cloud Function)
-      const result = await this.analyzeMenu(gsUrl, downloadUrl);
+      const result = await this.analyzeMenu(gsUrl, downloadUrl, profile);
 
       return result;
     } catch (error) {

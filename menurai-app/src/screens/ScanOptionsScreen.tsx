@@ -40,8 +40,17 @@ type NavigationProp = StackNavigationProp<ScanStackParamList, 'ScanOptions'>;
 export const ScanOptionsScreen: React.FC = () => {
   const { colors } = useTheme();
   const navigation = useNavigation<NavigationProp>();
-  const { canScan, remainingScans, profile, isPremiumUser } = useUserProfile();
+  const {
+    canScan,
+    remainingScans,
+    profile,
+    isPremiumUser,
+    profiles,
+    currentProfile,
+    selectProfile,
+  } = useUserProfile();
   const [modalVisible, setModalVisible] = useState(false);
+  const [profilePickerVisible, setProfilePickerVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [recentScans, setRecentScans] = useState<ScanHistory[]>([]);
   const [loadingRecent, setLoadingRecent] = useState(true);
@@ -65,6 +74,40 @@ export const ScanOptionsScreen: React.FC = () => {
       // Don't show alert for background loading errors, just log them
     } finally {
       setLoadingRecent(false);
+    }
+  };
+
+  const launchSourceModal = () => {
+    if (!canScan) {
+      navigation.navigate('Paywall', { context: 'scanLimit' });
+      return;
+    }
+    setModalVisible(true);
+  };
+
+  const handleStartScanning = () => {
+    if (!canScan) {
+      navigation.navigate('Paywall', { context: 'scanLimit' });
+      return;
+    }
+    if (!currentProfile) {
+      Alert.alert('Profile Loading', 'Please wait for your profile to finish loading.');
+      return;
+    }
+    if (profiles.length > 1) {
+      setProfilePickerVisible(true);
+      return;
+    }
+    setModalVisible(true);
+  };
+
+  const handleProfileSelection = async (profileId: string) => {
+    try {
+      await selectProfile(profileId);
+      setProfilePickerVisible(false);
+      setModalVisible(true);
+    } catch (error: any) {
+      Alert.alert('Unable to switch profile', error?.message || 'Please try again.');
     }
   };
 
@@ -241,16 +284,35 @@ export const ScanOptionsScreen: React.FC = () => {
             </GlassCard>
           )}
 
+        {currentProfile && (
+          <GlassCard style={styles.profileCard} intensity={60}>
+            <View style={styles.profileCardHeader}>
+              <Text style={[styles.profileCardLabel, { color: colors.secondaryText }]}>
+                Scanning for
+              </Text>
+              {profiles.length > 1 && (
+                <TouchableOpacity onPress={() => setProfilePickerVisible(true)}>
+                  <Text style={[styles.profileSwitchText, { color: Colors.brand.primary }]}>
+                    Switch
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            <Text style={[styles.profileName, { color: colors.primaryText }]}>
+              {currentProfile.name}
+            </Text>
+            <Text style={[styles.profileSubtext, { color: colors.secondaryText }]}>
+              {currentProfile.dietaryPresets.length > 0
+                ? `${currentProfile.dietaryPresets.length} dietary preferences`
+                : 'No dietary presets yet'}
+            </Text>
+          </GlassCard>
+        )}
+
           {/* Scan Button */}
           <Button
             title={canScan ? "Start Scanning" : "Upgrade to Scan"}
-            onPress={() => {
-              if (canScan) {
-                setModalVisible(true);
-              } else {
-                navigation.navigate('Paywall', { context: 'scanLimit' });
-              }
-            }}
+          onPress={handleStartScanning}
             icon={<Camera size={20} color={Colors.white} />}
             fullWidth
             style={styles.scanButton}
@@ -353,6 +415,72 @@ export const ScanOptionsScreen: React.FC = () => {
           </View>
         </ScrollView>
       </PageTransition>
+
+      {/* Profile selector modal */}
+      <Modal
+        animationType="fade"
+        transparent
+        visible={profilePickerVisible}
+        onRequestClose={() => setProfilePickerVisible(false)}
+      >
+        <GlassModal visible={profilePickerVisible}>
+          <GlassCard style={styles.modalContent} intensity={90}>
+            <View style={styles.modalHeader}>
+              <View style={styles.modalHeaderSpacer} />
+              <Text style={[styles.modalTitle, { color: colors.primaryText }]}>
+                Choose a Profile
+              </Text>
+              <TouchableOpacity
+                style={styles.modalHeaderSpacer}
+                onPress={() => setProfilePickerVisible(false)}
+              >
+                <X size={24} color={colors.secondaryText} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.profileList}>
+              {profiles.map((p) => (
+                <TouchableOpacity
+                  key={p.id}
+                  style={[
+                    styles.profileOption,
+                    {
+                      borderColor: currentProfile?.id === p.id ? Colors.brand.primary : colors.border,
+                      backgroundColor: currentProfile?.id === p.id ? Colors.brand.primary + '10' : colors.background,
+                    },
+                  ]}
+                  onPress={() => handleProfileSelection(p.id)}
+                >
+                  <View style={styles.profileOptionInfo}>
+                    <Text style={[styles.profileOptionName, { color: colors.primaryText }]}>
+                      {p.name}
+                    </Text>
+                    <Text style={[styles.profileOptionMeta, { color: colors.secondaryText }]}>
+                      {p.dietaryPresets.length > 0
+                        ? `${p.dietaryPresets.length} preferences`
+                        : 'No presets'}
+                    </Text>
+                  </View>
+                  <View style={styles.profileOptionTags}>
+                    {p.isPrimary && (
+                      <Text style={[styles.profileTagBadge, { color: Colors.brand.primary }]}>Primary</Text>
+                    )}
+                    {currentProfile?.id === p.id && (
+                      <Text style={[styles.profileTagBadge, { color: Colors.brand.primary }]}>Active</Text>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Button
+              title="Cancel"
+              variant="ghost"
+              onPress={() => setProfilePickerVisible(false)}
+              fullWidth
+              style={styles.cancelButton}
+            />
+          </GlassCard>
+        </GlassModal>
+      </Modal>
 
       {/* Selection Modal with Glass Effect */}
       <Modal
@@ -460,6 +588,31 @@ const styles = StyleSheet.create({
     ...Typography.bodySmall,
     textAlign: 'center',
   },
+  profileCard: {
+    marginBottom: Spacing.md,
+    padding: Spacing.md,
+  },
+  profileCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  profileCardLabel: {
+    ...Typography.caption,
+    textTransform: 'uppercase' as 'uppercase',
+  },
+  profileSwitchText: {
+    ...Typography.caption,
+    fontWeight: '600' as '600',
+  },
+  profileName: {
+    ...Typography.h4,
+    marginTop: Spacing.sm,
+  },
+  profileSubtext: {
+    ...Typography.caption,
+    marginTop: Spacing.xs,
+  },
   scanButton: {
     marginBottom: Spacing.xl,
   },
@@ -521,6 +674,38 @@ const styles = StyleSheet.create({
     maxWidth: 400,
     borderRadius: BorderRadius.xl,
     padding: Spacing.lg,
+  },
+  profileList: {
+    marginBottom: Spacing.md,
+  },
+  profileOption: {
+    borderWidth: 1,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+  },
+  profileOptionInfo: {
+    flex: 1,
+  },
+  profileOptionName: {
+    ...Typography.bodyMedium,
+    fontWeight: '600' as '600',
+  },
+  profileOptionMeta: {
+    ...Typography.caption,
+    marginTop: Spacing.xs,
+  },
+  profileOptionTags: {
+    alignItems: 'flex-end',
+  },
+  profileTagBadge: {
+    ...Typography.caption,
+    fontWeight: '600' as '600',
+    textTransform: 'uppercase' as 'uppercase',
+    marginTop: Spacing.xs,
   },
   modalHeader: {
     flexDirection: 'row',

@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   Alert,
   Platform,
+  Modal,
 } from 'react-native';
 import {
   Utensils,
@@ -21,11 +22,14 @@ import {
   Plus,
   Star,
   AlertCircle,
+  CheckCircle,
+  Trash2,
+  X,
 } from '../components/icons';
 import { useTheme } from '../theme/ThemeContext';
 import { Colors } from '../theme/colors';
 import { Typography, Spacing, BorderRadius } from '../theme/styles';
-import { Button, Card, Chip } from '../components';
+import { Button, Card, Chip, GlassModal, GlassCard } from '../components';
 import { useAuth } from '../hooks/useAuth';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { useNavigation } from '@react-navigation/native';
@@ -53,28 +57,37 @@ export const ProfileScreen: React.FC = () => {
   const { colors } = useTheme();
   const { user, signOut } = useAuth();
   const {
-    profile,
+    profile: accountProfile,
+    profiles,
+    currentProfile,
     canEditDietaryPresets,
     daysRemainingForEdit,
     isFreeEdit,
     isPremiumUser,
+    selectProfile,
+    deleteAccount,
+    deleteProfile,
   } = useUserProfile();
   const navigation = useNavigation<any>();
   const [cancelLoading, setCancelLoading] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const [deleteProfileModalVisible, setDeleteProfileModalVisible] = useState(false);
+  const [profileToDelete, setProfileToDelete] = useState<typeof profiles[0] | null>(null);
+  const [deletingProfile, setDeletingProfile] = useState(false);
 
-  const subscriptionStatus = profile?.subscriptionStatus ?? 'free';
+  const subscriptionStatus = accountProfile?.subscriptionStatus ?? 'free';
   const subscriptionStatusLabel =
     SUBSCRIPTION_STATUS_LABELS[subscriptionStatus as keyof typeof SUBSCRIPTION_STATUS_LABELS] ||
     'Free';
-  const planLabel = profile?.planId ? PLAN_LABELS[profile.planId] ?? 'Premium Plan' : 'Free Plan';
+  const planLabel = accountProfile?.planId ? PLAN_LABELS[accountProfile.planId] ?? 'Premium Plan' : 'Free Plan';
   const validUntilDate =
-    profile?.validUntil && typeof profile.validUntil.toDate === 'function'
-      ? profile.validUntil.toDate()
+    accountProfile?.validUntil && typeof accountProfile.validUntil.toDate === 'function'
+      ? accountProfile.validUntil.toDate()
       : null;
   const validUntilText = validUntilDate ? format(validUntilDate, 'MMM d, yyyy') : null;
 
-  const handleEditProfile = () => {
-    navigation.navigate('ProfileSetup', { isEditMode: true });
+  const handleEditProfile = (profileId?: string) => {
+    navigation.navigate('ProfileSetup', { isEditMode: true, profileId });
   };
 
   const handleAddProfile = () => {
@@ -85,12 +98,75 @@ export const ProfileScreen: React.FC = () => {
     } else {
       // Premium user - check if they can add more profiles (max 4)
       // For now, show an alert. Later this can navigate to profile creation
-      Alert.alert(
-        'Add Profile',
-        'Profile creation feature coming soon. Premium users can add up to 4 profiles.',
-        [{ text: 'OK' }]
-      );
+      if (profiles.length >= 4) {
+        Alert.alert('Limit Reached', 'You have reached the maximum number of profiles.');
+        return;
+      }
+      navigation.navigate('ProfileSetup', { isEditMode: true, mode: 'create' });
     }
+  };
+
+  const handleSetActiveProfile = async (profileId: string) => {
+    try {
+      await selectProfile(profileId);
+    } catch (error: any) {
+      Alert.alert('Error', error?.message || 'Failed to switch profile.');
+    }
+  };
+
+  const handleDeleteProfile = (profile: typeof profiles[0]) => {
+    if (profile.isPrimary) {
+      Alert.alert('Cannot Delete', 'The primary profile cannot be deleted.');
+      return;
+    }
+
+    setProfileToDelete(profile);
+    setDeleteProfileModalVisible(true);
+  };
+
+  const confirmDeleteProfile = async () => {
+    if (!profileToDelete) return;
+
+    try {
+      setDeletingProfile(true);
+      await deleteProfile(profileToDelete.id);
+      setDeleteProfileModalVisible(false);
+      setProfileToDelete(null);
+    } catch (error: any) {
+      Alert.alert('Error', error?.message || 'Failed to delete profile.');
+    } finally {
+      setDeletingProfile(false);
+    }
+  };
+
+  const cancelDeleteProfile = () => {
+    setDeleteProfileModalVisible(false);
+    setProfileToDelete(null);
+  };
+
+  const handleDeleteAccountData = () => {
+    Alert.alert(
+      'Delete Account',
+      'This will permanently delete your account, all profiles, and history across all devices. This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setDeletingAccount(true);
+              await deleteAccount();
+              await signOut();
+            } catch (error: any) {
+              Alert.alert('Error', error?.message || 'Failed to delete account.');
+            } finally {
+              setDeletingAccount(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const showAlert = (title: string, message: string) => {
@@ -196,9 +272,9 @@ export const ProfileScreen: React.FC = () => {
             </View>
             <TouchableOpacity 
               onPress={handleAddProfile}
-              style={[styles.addProfileButton, { backgroundColor: Colors.brand.blue + '20' }]}
+              style={[styles.addProfileButton, { backgroundColor: Colors.brand.primary + '20' }]}
             >
-              <Plus size={20} color={Colors.brand.blue} />
+              <Plus size={20} color={Colors.brand.primary} />
             </TouchableOpacity>
           </View>
         </Card>
@@ -206,8 +282,8 @@ export const ProfileScreen: React.FC = () => {
         {/* Subscription Card */}
         <Card style={styles.subscriptionCard}>
           <View style={styles.subscriptionHeader}>
-            <View style={[styles.subscriptionIcon, { backgroundColor: Colors.brand.blue + '20' }]}>
-              <Star size={24} color={Colors.brand.blue} fill={Colors.brand.blue} />
+            <View style={[styles.subscriptionIcon, { backgroundColor: Colors.brand.primary + '20' }]}>
+              <Star size={24} color={Colors.brand.primary} fill={Colors.brand.primary} />
             </View>
             <View style={styles.subscriptionDetails}>
               <Text style={[styles.subscriptionTitle, { color: colors.primaryText }]}>
@@ -216,7 +292,7 @@ export const ProfileScreen: React.FC = () => {
               <Text
                 style={[
                   styles.subscriptionStatus,
-                  { color: isPremiumUser ? Colors.brand.green : colors.secondaryText },
+                  { color: isPremiumUser ? Colors.semantic.compliant : colors.secondaryText },
                 ]}
               >
                 {subscriptionStatusLabel}
@@ -279,17 +355,89 @@ export const ProfileScreen: React.FC = () => {
           )}
         </Card>
 
+        <Card style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionTitleRow}>
+              <User size={24} color={Colors.brand.primary} />
+              <Text style={[styles.sectionTitle, { color: colors.primaryText }]}>
+                Profiles
+              </Text>
+            </View>
+            <TouchableOpacity onPress={handleAddProfile}>
+              <Plus size={20} color={Colors.brand.primary} />
+            </TouchableOpacity>
+          </View>
+          {profiles.length === 0 ? (
+            <Text style={[styles.emptyText, { color: colors.secondaryText }]}>
+              Create profiles to scan for family members.
+            </Text>
+          ) : (
+            profiles.map((p) => (
+              <View key={p.id} style={[styles.profileCard, { borderColor: colors.border }]}>
+                <View style={styles.profileInfo}>
+                  <Text style={[styles.profileName, { color: colors.primaryText }]}>{p.name}</Text>
+                  <Text style={[styles.profileMeta, { color: colors.secondaryText }]}>
+                    {p.dietaryPresets.length > 0
+                      ? `${p.dietaryPresets.length} presets`
+                      : 'No presets'}
+                  </Text>
+                  <View style={styles.profileBadges}>
+                    {p.isPrimary && (
+                      <Text style={[styles.profileBadge, { color: Colors.brand.primary }]}>Primary</Text>
+                    )}
+                    {currentProfile?.id === p.id && (
+                      <Text style={[styles.profileBadge, { color: Colors.brand.primary }]}>Active</Text>
+                    )}
+                  </View>
+                </View>
+                <View style={styles.profileActions}>
+                  <TouchableOpacity
+                    style={styles.profileActionButton}
+                    onPress={() => handleEditProfile(p.id)}
+                    accessibilityLabel={`Edit ${p.name}`}
+                  >
+                    <Edit2 size={16} color={colors.secondaryText} />
+                  </TouchableOpacity>
+                  {currentProfile?.id !== p.id && (
+                    <TouchableOpacity
+                      style={styles.profileActionButton}
+                      onPress={() => handleSetActiveProfile(p.id)}
+                      accessibilityLabel={`Set ${p.name} as active`}
+                    >
+                      <CheckCircle size={16} color={Colors.semantic.compliant} />
+                    </TouchableOpacity>
+                  )}
+                  {!p.isPrimary && (
+                    <TouchableOpacity
+                      style={styles.profileActionButton}
+                      onPress={() => handleDeleteProfile(p)}
+                      accessibilityLabel={`Delete ${p.name}`}
+                    >
+                      <Trash2 size={16} color={Colors.semantic.nonCompliant} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            ))
+          )}
+          {profiles.length >= 4 && (
+            <Text style={[styles.limitNote, { color: colors.secondaryText }]}>
+              Maximum of 4 profiles added.
+            </Text>
+          )}
+        </Card>
+
         {/* Dietary Profile Card */}
         <Card style={styles.section}>
           <View style={styles.sectionHeader}>
           <View style={styles.sectionTitleRow}>
-            <Utensils size={24} color={Colors.brand.green} />
+            <Utensils size={24} color={Colors.semantic.compliant} />
               <Text style={[styles.sectionTitle, { color: colors.primaryText }]}>
                 Dietary Profile
               </Text>
           </View>
-          <TouchableOpacity onPress={handleEditProfile}>
-            <Edit2 size={20} color={Colors.brand.blue} />
+          <TouchableOpacity onPress={() => handleEditProfile(currentProfile?.id)}>
+            <Edit2 size={20} color={Colors.brand.primary} />
             </TouchableOpacity>
           </View>
 
@@ -303,41 +451,41 @@ export const ProfileScreen: React.FC = () => {
           )}
 
           {isFreeEdit && (
-            <View style={[styles.lockNotice, { backgroundColor: Colors.brand.blue + '20' }]}>
-              <Info size={16} color={Colors.brand.blue} />
-              <Text style={[styles.lockText, { color: Colors.brand.blue }]}>
+            <View style={[styles.lockNotice, { backgroundColor: Colors.brand.primary + '20' }]}>
+              <Info size={16} color={Colors.brand.primary} />
+              <Text style={[styles.lockText, { color: Colors.brand.primary }]}>
                 You have one free edit available
               </Text>
             </View>
           )}
 
-          {profile?.dietaryPresets && profile.dietaryPresets.length > 0 && (
+          {currentProfile?.dietaryPresets && currentProfile.dietaryPresets.length > 0 && (
             <>
               <Text style={[styles.subsectionTitle, { color: colors.secondaryText }]}>
                 Dietary Preferences
               </Text>
               <View style={styles.chipsContainer}>
-                {profile.dietaryPresets.map((preset) => (
+                {currentProfile.dietaryPresets.map((preset) => (
                   <Chip key={preset} label={preset} selected variant="filter" />
                 ))}
               </View>
             </>
           )}
 
-          {profile?.customRestrictions && profile.customRestrictions.length > 0 && (
+          {currentProfile?.customRestrictions && currentProfile.customRestrictions.length > 0 && (
             <>
               <Text style={[styles.subsectionTitle, { color: colors.secondaryText }]}>
                 Restrictions
               </Text>
               <View style={styles.chipsContainer}>
-                {profile.customRestrictions.map((restriction) => (
+                {currentProfile.customRestrictions.map((restriction) => (
                   <Chip key={restriction} label={restriction} selected variant="input" />
                 ))}
               </View>
             </>
           )}
 
-          {(!profile?.dietaryPresets?.length && !profile?.customRestrictions?.length) && (
+          {(!currentProfile?.dietaryPresets?.length && !currentProfile?.customRestrictions?.length) && (
             <Text style={[styles.emptyText, { color: colors.secondaryText }]}>
               No dietary preferences set. Tap edit to add your preferences.
             </Text>
@@ -405,6 +553,15 @@ export const ProfileScreen: React.FC = () => {
           </TouchableOpacity>
         </Card>
 
+        <Button
+          title="Delete Account & Data"
+          variant="ghost"
+          onPress={handleDeleteAccountData}
+          fullWidth
+          style={styles.deleteAccountButton}
+          loading={deletingAccount}
+        />
+
         {/* Sign Out Button */}
         <Button
           title="Sign Out"
@@ -422,6 +579,57 @@ export const ProfileScreen: React.FC = () => {
           v{appVersion}
         </Text>
       </ScrollView>
+
+      {/* Delete Profile Confirmation Modal */}
+      <Modal
+        animationType="fade"
+        transparent
+        visible={deleteProfileModalVisible}
+        onRequestClose={cancelDeleteProfile}
+      >
+        <GlassModal visible={deleteProfileModalVisible}>
+          <GlassCard style={styles.deleteModalContent} intensity={90}>
+            <View style={styles.deleteModalHeader}>
+              <View style={styles.modalHeaderSpacer} />
+              <Text style={[styles.deleteModalTitle, { color: colors.primaryText }]}>
+                Delete Profile
+              </Text>
+              <TouchableOpacity
+                style={styles.modalHeaderSpacer}
+                onPress={cancelDeleteProfile}
+              >
+                <X size={24} color={colors.secondaryText} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.deleteModalBody}>
+              <AlertCircle size={48} color={Colors.semantic.nonCompliant} />
+              <Text style={[styles.deleteModalMessage, { color: colors.primaryText }]}>
+                Are you sure you want to delete "{profileToDelete?.name}"?
+              </Text>
+              <Text style={[styles.deleteModalWarning, { color: colors.secondaryText }]}>
+                This will permanently remove the profile and all associated scan history. This action cannot be undone.
+              </Text>
+            </View>
+            <View style={styles.deleteModalActions}>
+              <Button
+                title="Cancel"
+                variant="ghost"
+                onPress={cancelDeleteProfile}
+                fullWidth
+                style={styles.deleteModalCancelButton}
+              />
+              <Button
+                title="Delete"
+                variant="primary"
+                onPress={confirmDeleteProfile}
+                fullWidth
+                loading={deletingProfile}
+                style={[styles.deleteModalDeleteButton, { backgroundColor: Colors.semantic.nonCompliant }]}
+              />
+            </View>
+          </GlassCard>
+        </GlassModal>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -557,6 +765,46 @@ const styles = StyleSheet.create({
     ...Typography.body,
     fontStyle: 'italic',
   },
+  limitNote: {
+    ...Typography.caption,
+    marginTop: Spacing.sm,
+  },
+  profileCard: {
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+  },
+  profileInfo: {
+    flex: 1,
+  },
+  profileName: {
+    ...Typography.bodyMedium,
+    fontWeight: '600' as '600',
+  },
+  profileMeta: {
+    ...Typography.caption,
+    marginTop: Spacing.xs,
+  },
+  profileBadges: {
+    flexDirection: 'row',
+    marginTop: Spacing.xs,
+  },
+  profileBadge: {
+    ...Typography.caption,
+    marginRight: Spacing.sm,
+    fontWeight: '600' as '600',
+  },
+  profileActions: {
+    flexDirection: 'row',
+    marginLeft: Spacing.sm,
+  },
+  profileActionButton: {
+    padding: Spacing.sm,
+  },
   settingRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -579,9 +827,58 @@ const styles = StyleSheet.create({
   signOutButton: {
     marginTop: Spacing.lg,
   },
+  deleteAccountButton: {
+    marginTop: Spacing.sm,
+  },
   version: {
     ...Typography.caption,
     textAlign: 'center',
     marginTop: Spacing.lg,
+  },
+  deleteModalContent: {
+    width: '90%',
+    maxWidth: 400,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
+  },
+  deleteModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+  },
+  modalHeaderSpacer: {
+    width: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteModalTitle: {
+    ...Typography.h4,
+    textAlign: 'center',
+    flex: 1,
+  },
+  deleteModalBody: {
+    alignItems: 'center',
+    marginBottom: Spacing.xl,
+  },
+  deleteModalMessage: {
+    ...Typography.h5,
+    textAlign: 'center',
+    marginTop: Spacing.md,
+    marginBottom: Spacing.sm,
+  },
+  deleteModalWarning: {
+    ...Typography.bodySmall,
+    textAlign: 'center',
+    marginTop: Spacing.sm,
+  },
+  deleteModalActions: {
+    gap: Spacing.sm,
+  },
+  deleteModalCancelButton: {
+    marginBottom: 0,
+  },
+  deleteModalDeleteButton: {
+    marginTop: 0,
   },
 });

@@ -27,6 +27,13 @@ export interface ScanHistory {
   restaurantName?: string;
   notes?: string;
   createdAt: Timestamp;
+  profileId?: string | null;
+  profileName?: string;
+  profileSnapshot?: {
+    name: string;
+    dietaryPresets: string[];
+    customRestrictions: string[];
+  };
 }
 
 class HistoryService {
@@ -78,6 +85,9 @@ class HistoryService {
         items: analysisResult.items,
         scanDate: Timestamp.now(),
         createdAt: serverTimestamp() as Timestamp,
+        profileId: analysisResult.profileId ?? null,
+        profileName: analysisResult.profileName ?? 'Primary profile',
+        profileSnapshot: analysisResult.profileSnapshot ?? null,
       };
 
       // Only add optional fields if they are defined (not undefined)

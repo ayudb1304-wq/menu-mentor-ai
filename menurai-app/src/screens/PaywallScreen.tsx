@@ -143,7 +143,7 @@ export const PaywallScreen: React.FC = () => {
           name: user?.displayName ?? profile?.displayName ?? '',
         },
         theme: {
-          color: Colors.brand.blue,
+          color: Colors.brand.primary,
         },
       };
 
@@ -211,8 +211,8 @@ export const PaywallScreen: React.FC = () => {
           {/* Hero Section */}
           <HeroTransition delay={0} duration={400}>
             <View style={styles.heroSection}>
-              <View style={[styles.iconContainer, { backgroundColor: Colors.brand.blue + '20' }]}>
-                <Lock size={64} color={Colors.brand.blue} />
+              <View style={[styles.iconContainer, { backgroundColor: Colors.brand.primary + '20' }]}>
+                <Lock size={64} color={Colors.brand.primary} />
               </View>
               <Text style={[styles.heroTitle, { color: colors.primaryText }]}>
                 {context === 'addProfile' 
@@ -231,7 +231,7 @@ export const PaywallScreen: React.FC = () => {
           <HeroTransition delay={100} duration={400}>
             <GlassCard style={styles.premiumBadge} intensity={70}>
               <View style={styles.badgeContent}>
-                <Star size={32} color={Colors.brand.blue} fill={Colors.brand.blue} />
+                <Star size={32} color={Colors.brand.primary} fill={Colors.brand.primary} />
                 <Text style={[styles.badgeTitle, { color: colors.primaryText }]}>
                   MenuMentor Premium
                 </Text>
@@ -245,7 +245,7 @@ export const PaywallScreen: React.FC = () => {
           {/* Plan Selector */}
           <HeroTransition delay={120} duration={400}>
             <Card style={styles.planSelectorCard} variant="elevated">
-              <View style={[styles.planToggleContainer, { backgroundColor: Colors.brand.blue + '10' }]}>
+              <View style={[styles.planToggleContainer, { backgroundColor: Colors.brand.primary + '10' }]}>
                 {planOptions.map((option) => {
                   const isActive = selectedPlan === option.value;
                   return (
@@ -255,8 +255,8 @@ export const PaywallScreen: React.FC = () => {
                       style={[
                         styles.planToggle,
                         {
-                          backgroundColor: isActive ? Colors.brand.blue : colors.background,
-                          borderColor: Colors.brand.blue,
+                          backgroundColor: isActive ? Colors.brand.primary : colors.background,
+                          borderColor: Colors.brand.primary,
                         },
                       ]}
                       activeOpacity={0.8}
@@ -281,8 +281,8 @@ export const PaywallScreen: React.FC = () => {
                   {selectedPlanDetails.billingPeriod}
                 </Text>
                 {selectedPlanDetails.savingsLabel ? (
-                  <View style={[styles.planSavingsBadge, { backgroundColor: Colors.brand.blue + '15' }] }>
-                    <Text style={[styles.planSavingsText, { color: Colors.brand.blue }]}>
+                  <View style={[styles.planSavingsBadge, { backgroundColor: Colors.brand.primary + '15' }] }>
+                    <Text style={[styles.planSavingsText, { color: Colors.brand.primary }]}>
                       {selectedPlanDetails.savingsLabel}
                     </Text>
                   </View>
@@ -300,8 +300,8 @@ export const PaywallScreen: React.FC = () => {
               <HeroTransition key={index} delay={150 + index * 50} duration={400}>
                 <Card style={styles.featureCard} variant="elevated">
                   <View style={styles.featureContent}>
-                    <View style={[styles.featureIcon, { backgroundColor: Colors.brand.green + '20' }]}>
-                      <CheckCircle size={24} color={Colors.brand.green} />
+                    <View style={[styles.featureIcon, { backgroundColor: Colors.semantic.compliant + '20' }]}>
+                      <CheckCircle size={24} color={Colors.semantic.compliant} />
                     </View>
                     <View style={styles.featureText}>
                       <Text style={[styles.featureTitle, { color: colors.primaryText }]}>

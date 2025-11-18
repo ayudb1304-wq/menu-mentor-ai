@@ -466,6 +466,112 @@ export const abortPendingSubscription = onCall(
   }
 );
 
+const deleteHistoryByProfile = async (uid: string, profileId: string) => {
+  const historyRef = db.collection("users").doc(uid).collection("scanHistory");
+  let batchSize = 0;
+  do {
+    const snapshot = await historyRef.where("profileId", "==", profileId).limit(300).get();
+    batchSize = snapshot.size;
+    if (batchSize === 0) {
+      break;
+    }
+    const batch = db.batch();
+    snapshot.docs.forEach((docSnap) => batch.delete(docSnap.ref));
+    await batch.commit();
+  } while (batchSize === 300);
+};
+
+// Note: onCall functions automatically handle CORS, but if you encounter CORS errors,
+// ensure the function is properly deployed. For localhost development, Firebase Functions
+// should automatically allow requests from localhost origins.
+export const deleteUserProfileData = onCall({timeoutSeconds: 540}, async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) {
+    throw new HttpsError("unauthenticated", "Authentication required.");
+  }
+
+  const {profileId} = request.data as {profileId?: string};
+  if (!profileId || typeof profileId !== "string") {
+    throw new HttpsError("invalid-argument", "profileId is required.");
+  }
+
+  const userRef = db.collection("users").doc(uid);
+  const profileRef = userRef.collection("profiles").doc(profileId);
+
+  const profileSnap = await profileRef.get();
+  if (!profileSnap.exists) {
+    throw new HttpsError("not-found", "Profile not found.");
+  }
+
+  const profileData = profileSnap.data() as {isPrimary?: boolean; name?: string};
+  if (profileData?.isPrimary) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Primary profile can only be removed by deleting the account."
+    );
+  }
+
+  await db.runTransaction(async (tx) => {
+    const userSnap = await tx.get(userRef);
+    const currentProfileId = userSnap.get("currentProfileId");
+
+    tx.delete(profileRef);
+
+    const updates: FirebaseFirestore.DocumentData = {
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    if (currentProfileId === profileId) {
+      updates.currentProfileId = null;
+    }
+
+    tx.update(userRef, updates);
+  });
+
+  await deleteHistoryByProfile(uid, profileId);
+
+  return {success: true};
+});
+
+export const deleteAccountData = onCall({timeoutSeconds: 540}, async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) {
+    throw new HttpsError("unauthenticated", "Authentication required.");
+  }
+
+  const userRef = db.collection("users").doc(uid);
+
+  try {
+    await admin.firestore().recursiveDelete(userRef);
+  } catch (error) {
+    logger.error("Failed to delete user document recursively", error);
+    throw new HttpsError(
+      "internal",
+      error instanceof Error ? error.message : "Failed to delete account data."
+    );
+  }
+
+  try {
+    await admin.storage().bucket().deleteFiles({prefix: `uploads/${uid}/`});
+  } catch (error) {
+    logger.warn("Failed to delete storage files for user", {uid, error});
+  }
+
+  try {
+    await admin.auth().deleteUser(uid);
+  } catch (error) {
+    if ((error as {code?: string})?.code !== "auth/user-not-found") {
+      logger.error("Failed to delete auth user", error);
+      throw new HttpsError(
+        "internal",
+        error instanceof Error ? error.message : "Failed to delete authentication record."
+      );
+    }
+  }
+
+  return {success: true};
+});
+
 export const razorpayWebhookHandler = onRequest(
   {timeoutSeconds: 60, secrets: [razorpayKeyId, razorpayKeySecret, razorpayWebhookSecret]},
   async (request, response) => {
